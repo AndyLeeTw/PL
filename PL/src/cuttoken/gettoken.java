@@ -1,8 +1,9 @@
-package token;
+package cuttoken;
 
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.Arrays;
+import datatype.Token;
 
 public class gettoken {
     private int line;
@@ -16,24 +17,26 @@ public class gettoken {
     public void parser(){
         int commitIndex;
         String aLine;
-        ArrayList<String> token = new ArrayList<String>();
+        ArrayList<String> cuttenData = new ArrayList<String>();
+        ArrayList<Token> ALToken = new ArrayList<Token>();
         while(this.scan.hasNext()){
-            if(token.isEmpty()){
+            if(cuttenData.isEmpty()){
                 aLine = this.scan.nextLine();
                 this.line++;
-                token.addAll(Arrays.asList(aLine.split(" ")));
+                cuttenData.addAll(Arrays.asList(aLine.split(" ")));
             }
-            for(String S: token){
+            for(String S: cuttenData){
                 this.column++;
                 if(S.compareTo(";") == 0){
-                    commitIndex = token.indexOf(S);
-                    token.removeAll(token.subList(commitIndex, token.size() - 1));
+                    commitIndex = cuttenData.indexOf(S);
+                    cuttenData.removeAll(cuttenData.subList(commitIndex, cuttenData.size() - 1));
                     break;
                 } else if(S.length() != 0){
+                    ALToken.add(new Token(S, this.column));
                     this.column += S.length();
                 }
             }
-            token.clear();
+            cuttenData.clear();
             this.column = 0;
         }
     }

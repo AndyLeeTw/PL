@@ -1,6 +1,6 @@
 package PL_10220127;
 
-import token.gettoken;
+import cuttoken.gettoken;
 
 public class Main {
     public static void main(String []args){
