@@ -1,6 +1,8 @@
 package token;
 
 import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class gettoken {
     private int line;
@@ -13,22 +15,12 @@ public class gettoken {
     }
     private String getNext(){
         String aLine;
-        String[] token;
+        ArrayList<String> token = new ArrayList<String>();
         while(this.scan.hasNext()){
-            aLine = this.scan.nextLine();
-            token = aLine.split(" ");
-            for(String S:token)
-                System.out.println(S);
-            if(aLine.compareTo(";") == 0){
-                if(this.scan.hasNext()){
-                    this.scan.nextLine();
-                } else {
-                    return null;
-                }
-            } else {
-                if(aLine.compareTo("EOF") == 0)
-                    System.exit(0);
-                return aLine;
+            if(token.isEmpty()){
+                aLine = this.scan.nextLine();
+                this.line++;
+                token.addAll(Arrays.asList(aLine.split(" ")));
             }
         }
         return null;
