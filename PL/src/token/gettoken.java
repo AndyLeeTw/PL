@@ -13,7 +13,8 @@ public class gettoken {
         this.column = 0;
         this.scan = new Scanner(System.in);
     }
-    private String getNext(){
+    public void parser(){
+        int commitIndex;
         String aLine;
         ArrayList<String> token = new ArrayList<String>();
         while(this.scan.hasNext()){
@@ -22,13 +23,18 @@ public class gettoken {
                 this.line++;
                 token.addAll(Arrays.asList(aLine.split(" ")));
             }
-        }
-        return null;
-    }
-    public void parser(){
-        String beSolved;
-        while((beSolved = this.getNext()) != null){
-            System.out.println(beSolved + " " + this.line);
+            for(String S: token){
+                this.column++;
+                if(S.compareTo(";") == 0){
+                    commitIndex = token.indexOf(S);
+                    token.removeAll(token.subList(commitIndex, token.size() - 1));
+                    break;
+                } else if(S.length() != 0){
+                    this.column += S.length();
+                }
+            }
+            token.clear();
+            this.column = 0;
         }
     }
 }
