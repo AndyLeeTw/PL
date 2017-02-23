@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import datatype.Token;
 
+
 public class gettoken {
     private int line;
     private int column;
