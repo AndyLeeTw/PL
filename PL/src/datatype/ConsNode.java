@@ -7,5 +7,11 @@ public class ConsNode {
         this.RightNode = _RightNode;
         this.LeftNode = _LeftNode;
     }
-    
+    public ConsNode(){}
+    public void setRight(ConsNode Right){
+        this.RightNode = Right;
+    }
+    public void setLeft(ConsNode Left){
+        this.RightNode = Left;
+    }
 }

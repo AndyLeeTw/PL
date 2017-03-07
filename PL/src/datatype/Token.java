@@ -7,4 +7,7 @@ public class Token {
         this.data = _data;
         this.column = _column;
     }
+    public String getData(){
+        return this.data;
+    }
 }
