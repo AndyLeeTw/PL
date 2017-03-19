@@ -1,31 +1,36 @@
 package PL_10220127;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
-import datatype.Token;
-import tokenProcess.gettoken;
-
 public class Main {
-    public static void main(String []args){
-        int LineNum = 1;
-        ArrayList<Token> Tokens = new ArrayList<Token>();
-        Scanner Scan = new Scanner(System.in);
-        gettoken G = new gettoken();
-        System.out.println("Welcome to OurScheme!");
-        System.out.print("\n> ");
-        while(Scan.hasNext()){
-            Tokens = G.cutToken(Scan.nextLine());
-            for(Token S:Tokens){
-                if(S.getData().compareTo("(exit)") == 0){
-                    System.out.println("\nThanks for using OurScheme!");
-                    System.exit(0);
-                }
-                System.out.println(S.getData());
+    public static void main( String []args ) {
+    int lineNum = 1;
+    ArrayList<Token> tokens = new ArrayList<Token>();
+    TreeBuilder tb = new TreeBuilder();
+    ConsNode head = null;
+    Scanner scan = new Scanner( System.in );
+    GetToken g = new GetToken();
+    System.out.println( "Welcome to OurScheme!" );
+    System.out.print( "\n> " );
+    while( scan.hasNext() ) {
+        tokens = g.CutToken( scan.nextLine() );
+        /*
+        for( Token S:Tokens ){
+            if( S.getData(  ).compareTo( "( exit )" ) == 0 ){
+                System.out.println( "\nThanks for using OurScheme!" );
+                System.exit( 0 );
             }
-            LineNum++;
-            System.out.print("> ");
+            System.out.println( S.getData(  ) );
         }
-        System.out.println("\nThanks for using OurScheme!");
+        */
+        head = tb.TreeContruct( head, tokens );
+        tb.TreeTravel( head );
+        lineNum++;
+        System.out.print( "> " );
+        head = null;
+    }
+    System.out.println( "\nThanks for using OurScheme!" );
     }
 }

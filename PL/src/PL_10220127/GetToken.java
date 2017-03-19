@@ -1,39 +1,39 @@
-package tokenProcess;
+package PL_10220127;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import datatype.Token;
 
 
-public class gettoken {
-    private int column;
-    private ArrayList<String> cuttenData;
-    private ArrayList<Token> ALToken;
-    public gettoken(){
-        this.column = 0;
-        this.cuttenData = new ArrayList<String>();
-        this.ALToken = new ArrayList<Token>();
+public class GetToken {
+    private int mcolumn;
+    private ArrayList<String> mcuttenData;
+    private ArrayList<Token> mALToken;
+    public GetToken() {
+        this.mcolumn = 0;
+        this.mcuttenData = new ArrayList<String>();
+        this.mALToken = new ArrayList<Token>();
     }
-    public ArrayList<Token> cutToken(String _aLine){
+    public ArrayList<Token> CutToken( String aLineT ) {
         int commitIndex;
-        String aLine = _aLine;
-        if(!this.cuttenData.isEmpty()){
-            this.cuttenData.clear();
-            this.ALToken.clear();
+        String aLine = aLineT;
+        if(!this.mcuttenData.isEmpty()) {
+            this.mcuttenData.clear();
+            this.mALToken.clear();
         }
-        this.cuttenData.addAll(Arrays.asList(aLine.split(" ")));
-            for(String S: cuttenData){
-                this.column++;
-                if(S.compareTo(";") == 0){
-                    commitIndex = cuttenData.indexOf(S);
-                    this.cuttenData.removeAll(this.cuttenData.subList(commitIndex, cuttenData.size() - 1));
-                    break;
-                } else if(S.length() != 0){
-                    ALToken.add(new Token(S, this.column));
-                    this.column += S.length();
-                }
+        for(String T: aLine.split(" "))
+            this.mcuttenData.add(T);
+        for(String S: mcuttenData) {
+            this.mcolumn++;
+            if(S.compareTo(";") == 0) {
+                commitIndex = mcuttenData.indexOf(S);
+                this.mcuttenData.removeAll(this.mcuttenData.subList(commitIndex, mcuttenData.size() - 1));
+                break;
+            } else if(S.length() != 0) {
+                mALToken.add(new Token(S, this.mcolumn));
+                this.mcolumn += S.length();
             }
-        this.column = 0;
-        return new ArrayList<Token>(this.ALToken);
+        }
+        this.mcolumn = 0;
+        return new ArrayList<Token>(this.mALToken);
     }
 }

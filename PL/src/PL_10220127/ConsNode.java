@@ -1,17 +1,23 @@
-package datatype;
+package PL_10220127;
 
 public class ConsNode {
-    private ConsNode RightNode;
-    private ConsNode LeftNode;
-    public ConsNode(ConsNode _RightNode, ConsNode _LeftNode){
-        this.RightNode = _RightNode;
-        this.LeftNode = _LeftNode;
+    private ConsNode mRightNode;
+    private ConsNode mLeftNode;
+    public ConsNode( ConsNode RightNodeT, ConsNode LeftNodeT ) {
+        mRightNode = RightNodeT;
+        mLeftNode = LeftNodeT;
     }
-    public ConsNode(){}
-    public void setRight(ConsNode Right){
-        this.RightNode = Right;
+    public ConsNode() {}
+    public void SetRight( ConsNode Right ) {
+        mRightNode = Right;
     }
-    public void setLeft(ConsNode Left){
-        this.RightNode = Left;
+    public void SetLeft( ConsNode Left ) {
+        mLeftNode = Left;
+    }
+    public ConsNode GetLeft() {
+        return mLeftNode;
+    }
+    public ConsNode GetRight() {
+        return mRightNode;
     }
 }

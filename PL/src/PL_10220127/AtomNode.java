@@ -1,26 +1,30 @@
-package datatype;
+package PL_10220127;
 
-public class AtomNode extends ConsNode{
-    private String atom;
-    private boolean Nil;
-    public AtomNode(){
-        this("");
+public class AtomNode extends ConsNode {
+    private Token matom;
+    private boolean mNil;
+    public AtomNode( int column ) {
+        matom = new Token("", column);
+        SetNil(true);
     }
-    public AtomNode(String _atom) {
+    public AtomNode( Token atomT ) {
         // TODO Auto-generated constructor stub
         super(null, null);
-        this.setAtom(_atom);
+        SetAtom(atomT);
     }
-    public void setNil(boolean _Nil){
-        this.Nil = _Nil;
+    public void SetNil( boolean NilT ) {
+        mNil = NilT;
     }
-    public boolean isNil(){
-        return this.Nil;
+    public boolean IsNil() {
+        return mNil;
     }
-    public String getAtom() {
-        return atom;
+    public Token GetAtom() {
+        return matom;
     }
-    public void setAtom(String atom) {
-        this.atom = atom;
+    public void SetAtom( Token atomT ) {
+        matom = new Token(atomT);
+    }
+    public String ToString() {
+        return matom.GetData();
     }
 }
