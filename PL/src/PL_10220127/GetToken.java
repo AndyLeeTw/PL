@@ -42,15 +42,16 @@ public class GetToken {
       this.mcolumn++;
       if ( ss[i].length() == 0) ;
       else {
-        try{
-          Integer.valueOf(ss[i]);
-        } catch(NumberFormatException e)
-        {
-          System.out.println(ss[i]);
-        }
-        mALToken.add( new Token( ss[i], this.mcolumn ) );
+        if ( ss[i].matches( "^[+-]?\\d+$" ) ) {
+          mALToken.add( new Token( String.format( "%.0f", Float.valueOf( ss[i] ) ), this.mcolumn ) );
+        } // if
+        else if ( ss[i].matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
+          mALToken.add( new Token( String.format( "%.3f", Float.valueOf( ss[i] ) ), this.mcolumn ) );
+        } // else if
+        else
+          mALToken.add( new Token( ss[i], this.mcolumn ) );
         this.mcolumn += ss[i].length();
-      } // else if
+      } // else
     } // for
     this.mcolumn = 0;
     return this.mALToken;
