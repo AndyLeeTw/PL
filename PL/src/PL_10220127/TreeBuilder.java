@@ -9,8 +9,8 @@ public class TreeBuilder {
     ArrayList<Token> tokens = TokensT;
     ConsNode transTyper;
     if ( tokens.get( 0 ).GetData().substring( 0, 1 ).compareTo( "(" ) == 0 ) {
-      if ( tokens.size() > 1 && tokens.get( 1 ).GetData().compareTo( ")" ) == 0 )
-        return new AtomNode( tokens.get( 0 ).GetColumn() );
+      if ( tokens.get( 0 ).GetData().length() > 1 && tokens.get( 0 ).GetData().substring( 1, 2 ).compareTo( ")" ) == 0 )
+        return new AtomNode( new Token( "nil", tokens.get( 0 ).GetColumn() ) );
       else {
         if ( head == null )
           head = new ConsNode();

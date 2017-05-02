@@ -1,7 +1,6 @@
 package PL_10220127;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
 public class Main {
@@ -17,18 +16,19 @@ public class Main {
     while ( scan.hasNext() ) {
       tokens = g.CutToken( scan.nextLine() );
       
-      for( Token S:tokens ){
-          if( S.GetData(  ).compareTo( "( exit )" ) == 0 ){
-              System.out.println( "\nThanks for using OurScheme!" );
-              System.exit( 0 );
-          }
-          System.out.println( S.GetData(  ) );
-      }
+      for ( int i = 0; i < tokens.size() ; i++ ) {
+        if ( tokens.get( i ).GetData().compareTo( "(exit)" ) == 0 ) {
+          System.out.println( "\nThanks for using OurScheme!" );
+          System.exit( 0 );
+        }
+      } // for
       
-      //head = tb.TreeConStruct( head, tokens );
-      //tb.TreeTravel( head );
+      if ( !tokens.isEmpty() ) {
+        head = tb.TreeConStruct( head, tokens );
+        tb.TreeTravel( head );
+        System.out.print( "\n> " );
+      } // if
       lineNum++;
-      System.out.print( "> " );
       head = null;
     } // while
     
