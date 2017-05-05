@@ -8,15 +8,15 @@ public class TreeBuilder {
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> TokensT ) {
     ArrayList<Token> tokens = TokensT;
     ConsNode transTyper;
-    if ( tokens.get( 0 ).GetData().substring( 0, 1 ).compareTo( "(" ) == 0 ) {
+    if ( !tokens.isEmpty() && tokens.get( 0 ).GetData().substring( 0 , 1 ).compareTo( "(" ) == 0 ) {
       if ( tokens.get( 0 ).GetData().length() > 1 && tokens.get( 0 ).GetData().substring( 1, 2 ).compareTo( ")" ) == 0 )
-        return new AtomNode( new Token( "nil", tokens.get( 0 ).GetColumn() ) );
+        return new AtomNode( tokens.get( 0 ).GetColumn() );
       else {
         if ( head == null )
           head = new ConsNode();
-        tokens.get( 0 ).SetData( tokens.get( 0 ).GetData().replaceFirst( "[(]", "" ) );
+        tokens.get( 0 ).SetData( tokens.get( 0 ).GetData().replaceFirst( "^[(]", "" ) );
         if ( tokens.get( 0 ).GetData().length() == 0 )
-            tokens.remove(0);
+          tokens.remove(0);
         ConsNode c = null;
         head.SetLeft( TreeConStruct( c, tokens ) );
         head.SetRight( TreeConStruct( new ConsNode(), tokens ) );
@@ -32,6 +32,7 @@ public class TreeBuilder {
       tokens.remove( 0 );
     } // else if
     else {
+      if ( tokens.get( 0 ).GetData().contains( ")" ) )
       if ( head == null ) {
         head = new AtomNode( tokens.get( 0 ) );
         tokens.remove( 0 );

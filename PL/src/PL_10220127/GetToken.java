@@ -38,9 +38,9 @@ public class GetToken {
       } // if
     } // for
     
-    for ( int i = 0; i < ss.length && !ss[i].startsWith(";") ; i++ ) {
+    for ( int i = 0; i < ss.length && !ss[i].startsWith( ";" ) ; i++ ) {
       this.mcolumn++;
-      if ( ss[i].length() == 0) ;
+      if ( ss[i].length() == 0 ) ;
       else {
         if ( ss[i].matches( "^[+-]?\\d+$" ) ) {
           mALToken.add( new Token( String.format( "%.0f", Float.valueOf( ss[i] ) ), this.mcolumn ) );
@@ -48,11 +48,17 @@ public class GetToken {
         else if ( ss[i].matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
           mALToken.add( new Token( String.format( "%.3f", Float.valueOf( ss[i] ) ), this.mcolumn ) );
         } // else if
-        else
+        else {
+          ss[i] = ss[i].replaceAll( "(?!')\\\\n(?!')", "\n" );
+          ss[i] = ss[i].replaceAll( "(?!')\\\\\"(?!')", "\"" );
+          ss[i] = ss[i].replaceAll( "(?!')\\\\\\\\(?!')", "\\\\" );
           mALToken.add( new Token( ss[i], this.mcolumn ) );
+        } // else
+        
         this.mcolumn += ss[i].length();
       } // else
     } // for
+    
     this.mcolumn = 0;
     return this.mALToken;
   } // CutToken()

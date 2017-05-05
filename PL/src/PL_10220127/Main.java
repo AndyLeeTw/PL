@@ -11,6 +11,7 @@ public class Main {
     ConsNode head = null;
     Scanner scan = new Scanner( System.in );
     GetToken g = new GetToken();
+    scan.nextLine();
     System.out.println( "Welcome to OurScheme!" );
     System.out.print( "\n> " );
     while ( scan.hasNext() ) {
@@ -20,7 +21,7 @@ public class Main {
         if ( tokens.get( i ).GetData().compareTo( "(exit)" ) == 0 ) {
           System.out.println( "\nThanks for using OurScheme!" );
           System.exit( 0 );
-        }
+        } // if
       } // for
       
       if ( !tokens.isEmpty() ) {
@@ -28,6 +29,7 @@ public class Main {
         tb.TreeTravel( head );
         System.out.print( "\n> " );
       } // if
+      
       lineNum++;
       head = null;
     } // while

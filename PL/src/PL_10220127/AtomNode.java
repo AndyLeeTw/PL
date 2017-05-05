@@ -4,7 +4,8 @@ public class AtomNode extends ConsNode {
   private Token matom;
   private boolean mNil;
   public AtomNode( int column ) {
-    matom = new Token( "", column );
+    super( true );
+    matom = new Token( "nil", column );
     SetNil( true );
   } // AtomNode()
     
