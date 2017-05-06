@@ -21,6 +21,10 @@ public class Token {
     return mdata;
   } // GetData()
   
+  public void SetColumn( int column ) {
+    this.mcolumn = column;
+  } // SetColumn()
+  
   public int GetColumn() {
     return mcolumn;
   } // GetColumn()

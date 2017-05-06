@@ -26,7 +26,14 @@ public class Main {
       
       if ( !tokens.isEmpty() ) {
         head = tb.TreeConStruct( head, tokens );
-        tb.TreeTravel( head );
+        int column = 0;
+        if( !head.IsAtomNode() ) {
+          System.out.print( "( " );
+          column++;
+        }
+        tb.TreeTravel( head , column, true );
+        if( !head.IsAtomNode() )
+          System.out.print( ")" );
         System.out.print( "\n> " );
       } // if
       
