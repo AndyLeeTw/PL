@@ -1,21 +1,27 @@
 package PL_10220127;
 
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class GetToken {
   private int mcolumn;
+  private int mline;
+  private Scanner mscan;
   private ArrayList<Token> mALToken;
   public GetToken() {
     this.mcolumn = 0;
+    this.mline = 0;
     this.mALToken = new ArrayList<Token>();
+    this.mscan = new Scanner( System.in );
   } // GetToken()
   
-  public ArrayList<Token> CutToken( String aLineT ) {
-    String aLine = aLineT;
-    boolean isString = false;
-    this.mALToken.clear();
+  public void CutToken() {
+    String aLine;
+    if ( this.mscan.hasNextLine() ) {
+     aLine = this.mscan.nextLine();
+    //boolean isString = false;
     // \".*[^\\\\\\\\]+(\\\\.)*\"|\".*[^\\\\\\\\]+(\\\\.)*\\\\\\\\+[^\\\\\\\\]+\"|\"(\\\\.)*\"
-    String [] ss = aLine.split( " " );
+    /*String [] ss = aLine.split( " " );
     String realToken = "";
     int concatPosion = -1;
     for ( int i = 0; i < ss.length ; i++ ) {
@@ -58,8 +64,22 @@ public class GetToken {
         this.mcolumn += ss[i].length();
       } // else
     } // for
-    
-    this.mcolumn = 0;
-    return this.mALToken;
+    */
+     
+     this.mcolumn = 0;
+    }
+    else
+      this.mALToken.clear();
   } // CutToken()
+  
+  public boolean isEmpty() {
+    return this.mALToken.isEmpty();
+  } // isEmpty()
+  
+  public ArrayList<Token> getToken() {
+    ArrayList<Token> taken = new ArrayList<Token>();
+    taken.addAll( this.mALToken );
+    this.mALToken.clear();
+    return taken;
+  } // getToken()
 } // class GetToken

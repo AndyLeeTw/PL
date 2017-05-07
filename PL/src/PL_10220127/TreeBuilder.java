@@ -5,17 +5,22 @@ import java.util.ArrayList;
 public class TreeBuilder {
   public TreeBuilder() { }
   
-  public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> TokensT ) {
+  public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> TokensT, GetToken Getter ) {
     ArrayList<Token> tokens = TokensT;
     ConsNode transTyper;
-    if ( !tokens.isEmpty() && tokens.get( 0 ).GetData().matches( "^[(].*" ) ) {
+    if ( tokens.isEmpty() ) {
+      Getter.CutToken();
+      if ( !Getter.isEmpty() )
+        tokens.addAll( Getter.getToken() );
+    } // if
+    if ( tokens.get( 0 ).GetData().matches( "^[(].*" ) ) {
       if ( tokens.get( 0 ).GetData().matches( "[(][)]" ) ) {
         if ( head == null )
           head =  new AtomNode( tokens.get( 0 ).GetColumn() );
         else {
           head.SetLeft( new AtomNode( tokens.get( 0 ).GetColumn() ) );
           tokens.remove(0);
-          head.SetRight( TreeConStruct( new ConsNode(), tokens ) );
+          head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
         }
       } // if
       else {
@@ -25,11 +30,11 @@ public class TreeBuilder {
         if ( head == null ) {
           head = new ConsNode();
           ConsNode c = null;
-          head.SetLeft( TreeConStruct( c, tokens ) );
+          head.SetLeft( TreeConStruct( c, tokens, Getter ) );
         } // if
         else
-          head.SetLeft( TreeConStruct( new ConsNode(), tokens ) );
-        head.SetRight( TreeConStruct( new ConsNode(), tokens ) );
+          head.SetLeft( TreeConStruct( new ConsNode(), tokens, Getter ) );
+        head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
       } // else
     } // if
     else if ( tokens.get( 0 ).GetData().compareTo( ")" ) == 0 ) {
@@ -39,15 +44,6 @@ public class TreeBuilder {
     } // else if
     else {
       Token realToken = tokens.get(0);
-      /*if ( tokens.get( 0 ).GetData().contains( ")" ) ) {
-        realToken = new Token( tokens.get( 0 ).GetData().substring( 0, tokens.get( 0 ).GetData().indexOf( ")" ) ) , tokens.get( 0 ).GetColumn() );
-        tokens.get(0).SetData( tokens.get( 0 ).GetData().substring( tokens.get( 0 ).GetData().indexOf( ")" ) ) );
-        tokens.get(0).SetColumn( tokens.get( 0 ).GetColumn() + tokens.get( 0 ).GetData().indexOf( ")" ) );
-      }
-      else {
-        realToken = tokens.get(0);
-        tokens.remove(0);
-      }*/
       if ( head == null ) {
         head = new AtomNode( realToken );
         tokens.remove(0);
@@ -56,14 +52,14 @@ public class TreeBuilder {
         if ( tokens.get( 0 ).GetData().matches("[\\.]") ) {
           tokens.remove( 0 );
             ConsNode c = null;
-            head = TreeConStruct( c, tokens );
+            head = TreeConStruct( c, tokens, Getter );
             tokens.remove( 0 );
         }
         else {
           transTyper = new AtomNode( realToken );
           tokens.remove(0);
           head.SetLeft( transTyper );
-          head.SetRight( TreeConStruct( new ConsNode(), tokens ) );
+          head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
         }
       } // else 
     } // else
