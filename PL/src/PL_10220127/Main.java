@@ -14,7 +14,8 @@ public class Main {
     System.out.println( "Welcome to OurScheme!" );
     //System.out.print( "\n> " );
     do {
-        for ( int i = 0; i < tokens.size() ; i++ ) {
+      getter.CutToken();
+        /*for ( int i = 0; i < tokens.size() ; i++ ) {
           if ( tokens.get( i ).GetData().compareTo( "(exit)" ) == 0 ) {
             System.out.println( "\nThanks for using OurScheme!" );
             System.exit( 0 );
@@ -30,7 +31,8 @@ public class Main {
         tb.TreeTravel( head , column, true );
         if( !head.IsAtomNode() )
           System.out.println( ")" );
-      head = null;
+      head = null;*/
+      
     } while ( !getter.isEmpty() || !tokens.isEmpty() || true ); // while
     
     System.out.println( "\nThanks for using OurScheme!" );

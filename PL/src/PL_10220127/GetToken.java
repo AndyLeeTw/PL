@@ -19,9 +19,9 @@ public class GetToken {
     String aLine;
     if ( this.mscan.hasNextLine() ) {
      aLine = this.mscan.nextLine();
-    //boolean isString = false;
+    /*boolean isString = false;
     // \".*[^\\\\\\\\]+(\\\\.)*\"|\".*[^\\\\\\\\]+(\\\\.)*\\\\\\\\+[^\\\\\\\\]+\"|\"(\\\\.)*\"
-    /*String [] ss = aLine.split( " " );
+    String [] ss = aLine.split( " " );
     String realToken = "";
     int concatPosion = -1;
     for ( int i = 0; i < ss.length ; i++ ) {
@@ -64,8 +64,41 @@ public class GetToken {
         this.mcolumn += ss[i].length();
       } // else
     } // for
-    */
-     
+     */
+     while ( aLine.length() > 0 ) {
+       if ( aLine.startsWith( " " ) ) {
+         aLine = aLine.substring( 1 );
+         this.mcolumn++;
+       }
+       else if ( aLine.startsWith( "(" ) || aLine.startsWith( ")" ) ) {
+         this.mALToken.add(new Token( aLine.substring( 0, 1 ), this.mcolumn ) );
+         aLine = aLine.substring( 1 );
+         this.mcolumn++;
+       }
+       else if ( aLine.startsWith( "\"" ) ) {
+         int fromindex;
+         if ( aLine.contains( "\\\"" ) ) {
+           fromindex = aLine.indexOf( "\\\"" ) + 2;
+         }
+         else
+           fromindex = 1;
+         String realToken = aLine.substring( 0, aLine.indexOf( "\"", fromindex ) + 1 );
+         realToken = realToken.replaceAll( "(?!')\\\\n(?!')", "\n" );
+         realToken = realToken.replaceAll( "(?!')\\\\t(?!')", "\t" );
+         realToken = realToken.replaceAll( "(?!')\\\\\"(?!')", "\"" );
+         realToken = realToken.replaceAll( "(?!')\\\\\\\\(?!')", "\\\\" );
+         this.mALToken.add( new Token( realToken, this.mcolumn ) );
+         this.mcolumn += realToken.length();
+         aLine = aLine.substring( aLine.indexOf( "\"", fromindex ) + 1 );
+       }
+       else {
+         
+       }
+     }
+     for(Token T: this.mALToken){
+       System.out.println(T.GetData());
+     }
+     this.mALToken.clear();
      this.mcolumn = 0;
     }
     else
