@@ -8,111 +8,92 @@ public class GetToken {
   private int mline;
   private Scanner mscan;
   private ArrayList<Token> mALToken;
-  public GetToken() {
+  public GetToken( Scanner scan ) {
     this.mcolumn = 0;
     this.mline = 0;
     this.mALToken = new ArrayList<Token>();
-    this.mscan = new Scanner( System.in );
+    this.mscan = scan;
   } // GetToken()
   
   public void CutToken() {
-    String aLine;
-    if ( this.mscan.hasNextLine() ) {
-     aLine = this.mscan.nextLine();
-    /*boolean isString = false;
-    // \".*[^\\\\\\\\]+(\\\\.)*\"|\".*[^\\\\\\\\]+(\\\\.)*\\\\\\\\+[^\\\\\\\\]+\"|\"(\\\\.)*\"
-    String [] ss = aLine.split( " " );
-    String realToken = "";
-    int concatPosion = -1;
-    for ( int i = 0; i < ss.length ; i++ ) {
-      if ( ss[i].startsWith( "\"" ) && !isString ) {
-        isString = !isString;
-        concatPosion = i;
-        realToken = "";
-      } // if
-      
-      if ( isString ) {
-        realToken = realToken.concat( ss[i] );
-        if ( i != concatPosion && ss[i].endsWith( "\"" ) && !ss[i].endsWith( "\\\"" ) ) {
-          isString = !isString;
-          ss[concatPosion] = realToken;
+    String aLine = null;
+    while ( this.IsEmpty() && this.mscan.hasNextLine() ) {
+      aLine = this.mscan.nextLine();
+      while ( aLine.length() > 0 && !aLine.startsWith( ";" ) ) {
+        if ( aLine.startsWith( " " ) ) {
+          aLine = aLine.substring( 1 );
+          this.mcolumn++;
         } // if
-        else
-          realToken += " ";
-        if ( i != concatPosion )
-          ss[i] = "";
-      } // if
-    } // for
-    
-    for ( int i = 0; i < ss.length && !ss[i].startsWith( ";" ) ; i++ ) {
-      this.mcolumn++;
-      if ( ss[i].length() == 0 ) ;
-      else {
-        if ( ss[i].matches( "^[+-]?\\d+$" ) ) {
-          mALToken.add( new Token( String.format( "%.0f", Float.valueOf( ss[i] ) ), this.mcolumn ) );
-        } // if
-        else if ( ss[i].matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
-          mALToken.add( new Token( String.format( "%.3f", Float.valueOf( ss[i] ) ), this.mcolumn ) );
+        else if ( aLine.startsWith( "(" ) || aLine.startsWith( ")" ) ) {
+          this.mALToken.add( new Token( aLine.substring( 0, 1 ), this.mcolumn ) );
+          aLine = aLine.substring( 1 );
+          this.mcolumn++;
+        } // else if
+        else if ( aLine.startsWith( "\"" ) ) {
+          int fromindex;
+          if ( aLine.contains( "\\\"" ) ) {
+            fromindex = aLine.indexOf( "\\\"" ) + 2;
+          } // if
+          else
+            fromindex = 1;
+          String realToken = aLine.substring( 0, aLine.indexOf( "\"", fromindex ) + 1 );
+          this.mcolumn += realToken.length();
+          realToken = realToken.replaceAll( "(?!')\\\\n(?!')", "\n" );
+          realToken = realToken.replaceAll( "(?!')\\\\t(?!')", "\t" );
+          realToken = realToken.replaceAll( "\\\\\"", "\"" );
+          realToken = realToken.replaceAll( "\\\\\\\\", "\\\\" );
+          this.mALToken.add( new Token( realToken, this.mcolumn ) );
+          aLine = aLine.substring( aLine.indexOf( "\"", fromindex ) + 1 );
         } // else if
         else {
-          ss[i] = ss[i].replaceAll( "(?!')\\\\n(?!')", "\n" );
-          ss[i] = ss[i].replaceAll( "(?!')\\\\\"(?!')", "\"" );
-          ss[i] = ss[i].replaceAll( "(?!')\\\\\\\\(?!')", "\\\\" );
-          mALToken.add( new Token( ss[i], this.mcolumn ) );
-        } // else
-        
-        this.mcolumn += ss[i].length();
+          int tokenToIndex = Integer.MAX_VALUE;
+          int tryToIndex;
+          String cuttenToken;
+          String [] separator = { " ", "(", ")", "\"", ";" };
+          for ( int i = 0; i < separator.length ; i++ ) {
+            tryToIndex = aLine.indexOf( separator[i] );
+            if ( tryToIndex > 0 && tokenToIndex > tryToIndex )
+              tokenToIndex = tryToIndex;
+          } // for
+          
+          if ( tokenToIndex == Integer.MAX_VALUE ) {
+            cuttenToken = aLine.substring( 0 );
+            aLine = aLine.substring( cuttenToken.length() );
+          } // if
+          else {
+            cuttenToken = aLine.substring( 0, tokenToIndex );
+            aLine = aLine.substring( tokenToIndex );
+          } // else
+          
+          this.mcolumn += cuttenToken.length();
+          if ( cuttenToken.matches( "^[+-]?\\d+$" ) ) {
+            this.mALToken.add( new Token( String.format( "%.0f", Float.valueOf( cuttenToken ) ),
+                                          this.mcolumn ) );
+          } // if
+          else if ( cuttenToken.matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
+            this.mALToken.add( new Token( String.format( "%.3f", Float.valueOf( cuttenToken ) ),
+                                          this.mcolumn ) );
+          } // else if
+          else if ( cuttenToken.matches( "t" ) || cuttenToken.matches( "#t" ) )
+            this.mALToken.add( new Token( "#t", this.mcolumn ) );
+          else if ( cuttenToken.matches( "nil" ) || cuttenToken.matches( "#f" ) )
+            this.mALToken.add( new Token( "nil", this.mcolumn ) );
+          else
+            this.mALToken.add( new Token( cuttenToken, this.mcolumn ) );
+        } // while
       } // else
-    } // for
-     */
-     while ( aLine.length() > 0 ) {
-       if ( aLine.startsWith( " " ) ) {
-         aLine = aLine.substring( 1 );
-         this.mcolumn++;
-       }
-       else if ( aLine.startsWith( "(" ) || aLine.startsWith( ")" ) ) {
-         this.mALToken.add(new Token( aLine.substring( 0, 1 ), this.mcolumn ) );
-         aLine = aLine.substring( 1 );
-         this.mcolumn++;
-       }
-       else if ( aLine.startsWith( "\"" ) ) {
-         int fromindex;
-         if ( aLine.contains( "\\\"" ) ) {
-           fromindex = aLine.indexOf( "\\\"" ) + 2;
-         }
-         else
-           fromindex = 1;
-         String realToken = aLine.substring( 0, aLine.indexOf( "\"", fromindex ) + 1 );
-         realToken = realToken.replaceAll( "(?!')\\\\n(?!')", "\n" );
-         realToken = realToken.replaceAll( "(?!')\\\\t(?!')", "\t" );
-         realToken = realToken.replaceAll( "(?!')\\\\\"(?!')", "\"" );
-         realToken = realToken.replaceAll( "(?!')\\\\\\\\(?!')", "\\\\" );
-         this.mALToken.add( new Token( realToken, this.mcolumn ) );
-         this.mcolumn += realToken.length();
-         aLine = aLine.substring( aLine.indexOf( "\"", fromindex ) + 1 );
-       }
-       else {
-         
-       }
-     }
-     for(Token T: this.mALToken){
-       System.out.println(T.GetData());
-     }
-     this.mALToken.clear();
-     this.mcolumn = 0;
-    }
-    else
-      this.mALToken.clear();
+    } // while
   } // CutToken()
   
-  public boolean isEmpty() {
+  public boolean IsEmpty() {
     return this.mALToken.isEmpty();
-  } // isEmpty()
+  } // IsEmpty()
   
-  public ArrayList<Token> getToken() {
+  public ArrayList<Token> GetList() {
     ArrayList<Token> taken = new ArrayList<Token>();
-    taken.addAll( this.mALToken );
+    for ( int i = 0; i < this.mALToken.size() ; i++ )
+      taken.add( this.mALToken.get( i ) );
     this.mALToken.clear();
     return taken;
-  } // getToken()
+  } // GetList()
 } // class GetToken
