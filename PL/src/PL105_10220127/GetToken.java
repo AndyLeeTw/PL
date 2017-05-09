@@ -24,7 +24,7 @@ public class GetToken {
           aLine = aLine.substring( 1 );
           this.mcolumn++;
         } // if
-        else if ( aLine.startsWith( "(" ) || aLine.startsWith( ")" ) ) {
+        else if ( aLine.startsWith( "(" ) || aLine.startsWith( ")" ) || aLine.startsWith( "'" ) ) {
           this.mALToken.add( new Token( aLine.substring( 0, 1 ), this.mcolumn ) );
           aLine = aLine.substring( 1 );
           this.mcolumn++;
@@ -49,7 +49,7 @@ public class GetToken {
           int tokenToIndex = Integer.MAX_VALUE;
           int tryToIndex;
           String cuttenToken;
-          String [] separator = { " ", "(", ")", "\"", ";" };
+          String [] separator = { " ", "(", ")", "\"", ";" , "'" };
           for ( int i = 0; i < separator.length ; i++ ) {
             tryToIndex = aLine.indexOf( separator[i] );
             if ( tryToIndex > 0 && tokenToIndex > tryToIndex )
@@ -67,8 +67,8 @@ public class GetToken {
           
           this.mcolumn += cuttenToken.length();
           this.mALToken.add( new Token( cuttenToken, this.mcolumn ) );
-        } // while
-      } // else
+        } // else
+      } // while
     } // while
   } // CutToken()
   

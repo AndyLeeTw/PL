@@ -5,10 +5,29 @@ import java.util.ArrayList;
 public class TreeBuilder {
   public TreeBuilder() { }
   
-  public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter ) throws ErrorMessageException {
+  public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
+  throws ErrorMessageException {
     ConsNode transTyper;
     this.ReadSexp( tokens, Getter );
-    if ( tokens.get( 0 ).GetData().matches( "[(]" ) ) {
+    if ( tokens.get( 0 ).GetData().matches( "'" ) ) {
+      ConsNode nullHead = null;
+      if ( head == null ) {
+        head = new ConsNode();
+        transTyper = new AtomNode( new Token( "quote", tokens.get( 0 ).GetColumn() ) );
+        tokens.remove( 0 );
+        head.SetLeft( transTyper );
+        transTyper = new ConsNode();
+        head.SetRight( transTyper );
+        transTyper.SetLeft( TreeConStruct( nullHead, tokens, Getter ) );
+        ConsNode tTr = new AtomNode( 0 );
+        transTyper.SetRight( tTr );
+      } // if
+      else {
+        head.SetLeft( TreeConStruct( nullHead, tokens, Getter ) );
+        head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
+      }
+    } // if
+    else if ( tokens.get( 0 ).GetData().matches( "[(]" ) ) {
       this.ReadSexp( tokens, Getter, 2 );
       if ( tokens.get( 1 ).GetData().matches( "[)]" ) ) {
         if ( head == null ) {
@@ -35,7 +54,7 @@ public class TreeBuilder {
           head.SetLeft( TreeConStruct( new ConsNode(), tokens, Getter ) );
         head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
       } // else
-    } // if
+    } // else if
     else if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
       // transTyper = new AtomNode( tokens.get( 0 ).GetColumn() );
       // head.SetRight( transTyper );
@@ -54,8 +73,11 @@ public class TreeBuilder {
             realToken.SetData( String.format( "%.3f", Float.valueOf( realToken.GetData() ) ) );
           else if ( realToken.GetData().matches( "t" ) || realToken.GetData().matches( "#t" ) )
             realToken.SetData( "#t" );
+          else if ( realToken.GetData().matches( "'" ) )
+            realToken.SetData( "quote" );
           head = new AtomNode( realToken );
         } // else
+        
         tokens.remove( 0 );
       } // if
       else {
@@ -76,7 +98,8 @@ public class TreeBuilder {
     return head;
   } // TreeConStruct()
   
-  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter ) throws ErrorMessageException {
+  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter )
+  throws ErrorMessageException {
     if ( tokens.isEmpty() ) {
       Getter.CutToken();
       if ( !Getter.IsEmpty() ) {
@@ -89,7 +112,8 @@ public class TreeBuilder {
     } // if
   } // ReadSexp()
   
-  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter, int tokenssize ) throws ErrorMessageException {
+  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter, int tokenssize )
+  throws ErrorMessageException {
     if ( tokens.size() < tokenssize ) {
       Getter.CutToken();
       if ( !Getter.IsEmpty() ) {

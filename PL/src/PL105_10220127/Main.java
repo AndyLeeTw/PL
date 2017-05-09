@@ -23,27 +23,24 @@ public class Main {
             AtomNode transTyperL = ( AtomNode ) head.GetLeft();
             AtomNode transTyperR = ( AtomNode ) head.GetRight();
             if ( transTyperL.GetAtom().GetData().matches( "exit" ) && transTyperR.IsNil() )
-              throw new ErrorMessageException( "exit" );
+              throw new ErrorMessageException( "exit" ) ;
           } // if
           
           System.out.print( "( " );
-        }
+        } // if
+        
         tb.TreeTravel( head, 1, true );
         if ( !head.IsAtomNode() )
           System.out.println( ")" );
       } // try
       catch ( ErrorMessageException e ) {
-        switch ( e.GetErrorCode() ) {
-        case "EOF":
+        if ( e.GetErrorCode().matches( "EOF" ) )
           System.out.print( "\n> ERROR (no more input) : END-OF-FILE encountered" );
-          break;
-        case "exit":
-          break;
-        } // switch
-        
+        else if ( e.GetErrorCode().matches( "exit" ) ) ;
         isend = true;
       } // catch
     } // while
+    
     System.out.println( "\nThanks for using OurScheme!" );
   } // main()
 } // class Main
