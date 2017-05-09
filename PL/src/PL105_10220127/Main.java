@@ -17,27 +17,56 @@ public class Main {
       head = null;
       try {
         head = tb.TreeConStruct( head, tokens, getter );
-        System.out.print( "\n> " );
+        if ( !tokens.isEmpty() ) {
+          AtomNode atom = tb.FindLastToken( head );
+          for ( int i = 0; i < tokens.size() ; i++ ) {
+            tokens.get( i ).SetLine( 1 );
+            tokens.get( i ).SetColumn( tokens.get( i ).GetColumn() - atom.GetAtom().GetColumn() );
+          } // for
+          
+          getter.SetLine( 2 );
+        } // if
+        else
+          getter.SetLine( 1 );
         if ( !head.IsAtomNode() ) {
           if ( head.GetLeft().IsAtomNode() && head.GetRight().IsAtomNode() ) {
             AtomNode transTyperL = ( AtomNode ) head.GetLeft();
             AtomNode transTyperR = ( AtomNode ) head.GetRight();
             if ( transTyperL.GetAtom().GetData().matches( "exit" ) && transTyperR.IsNil() )
-              throw new ErrorMessageException( "exit" ) ;
+              throw new ErrorMessageException( "EOFT" ) ;
           } // if
           
-          System.out.print( "( " );
+          System.out.print( "\n> ( " );
         } // if
-        
+        else
+          System.out.print( "\n> " );
         tb.TreeTravel( head, 1, true );
         if ( !head.IsAtomNode() )
           System.out.println( ")" );
       } // try
       catch ( ErrorMessageException e ) {
-        if ( e.GetErrorCode().matches( "EOF" ) )
-          System.out.print( "\n> ERROR (no more input) : END-OF-FILE encountered" );
-        else if ( e.GetErrorCode().matches( "exit" ) ) ;
-        isend = true;
+        System.out.print( "\n> " );
+        if ( e.GetErrorCode().startsWith( "EOF" ) ) {
+          if ( e.GetErrorCode().matches( "EOF" ) ) {
+            System.out.print( "ERROR (no more input) : END-OF-FILE encountered" );
+          } // if
+          else if ( e.GetErrorCode().matches( "EOFT" ) ) ;
+          
+          isend = true;
+        } // if
+        else {
+          if ( e.GetErrorCode().matches( "EOL" ) ) {
+            System.out.println( "ERROR (no closing quote) : END-OF-LINE encountered at Line " + 
+                                e.GetLine() + " Column " + e.GetColumn() );
+          } // if
+          else if ( e.GetErrorCode().matches( "UT" ) ) {
+            System.out.println( "ERROR (unexpected token) : atom or '(' expected when token at Line " +
+                                e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
+          } // else if
+          
+          getter.SetLine( 1 );
+          tokens.clear();
+        } // else
       } // catch
     } // while
     

@@ -1,31 +1,42 @@
 package PL105_10220127;
 
 public class Token {
-  private int mcolumn;
-  private String mdata;
-  public Token( String dataT, int columnT ) {
-    mdata = dataT;
-    mcolumn = columnT;
+  private int mColumn;
+  private int mLine;
+  private String mData;
+  
+  public Token( String data, int line, int column ) {
+    this.mData = data;
+    this.mLine = line;
+    this.mColumn = column;
   } // Token()
   
   public Token( Token TokenT ) {
-    mdata = TokenT.GetData();
-    mcolumn = TokenT.GetColumn();
+    this.mData = TokenT.GetData();
+    this.mColumn = TokenT.GetColumn();
   } // Token()
   
   public void SetData( String DataT ) {
-    mdata = DataT;
+    this.mData = DataT;
   } // SetData()
   
   public String GetData() {
-    return mdata;
+    return this.mData;
   } // GetData()
   
+  public void SetLine( int line ) {
+    this.mLine = line;
+  } // SetLine()
+  
+  public int GetLine() {
+    return this.mLine;
+  } // GetLine()
+
   public void SetColumn( int column ) {
-    this.mcolumn = column;
+    this.mColumn = column;
   } // SetColumn()
   
   public int GetColumn() {
-    return mcolumn;
+    return this.mColumn;
   } // GetColumn()
 } // class Token

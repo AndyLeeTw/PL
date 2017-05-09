@@ -3,9 +3,10 @@ package PL105_10220127;
 public class AtomNode extends ConsNode {
   private Token matom;
   private boolean mNil;
-  public AtomNode( int column ) {
+  
+  public AtomNode( int line, int column ) {
     super( true );
-    matom = new Token( "nil", column );
+    matom = new Token( "nil", line, column );
     SetNil( true );
   } // AtomNode()
     
@@ -34,4 +35,5 @@ public class AtomNode extends ConsNode {
   public String ToString() {
     return matom.GetData();
   } // ToString()
+
 } // class AtomNode

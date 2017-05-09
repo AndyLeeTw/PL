@@ -8,91 +8,78 @@ public class TreeBuilder {
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
   throws ErrorMessageException {
     ConsNode transTyper;
+    final ConsNode NULL = null;
     this.ReadSexp( tokens, Getter );
-    if ( tokens.get( 0 ).GetData().matches( "'" ) ) {
-      ConsNode nullHead = null;
-      if ( head == null ) {
+    if ( head == null ) {
+      if ( tokens.get( 0 ).GetData().matches( "'" ) ) {
         head = new ConsNode();
-        transTyper = new AtomNode( new Token( "quote", tokens.get( 0 ).GetColumn() ) );
+        tokens.get( 0 ).SetData( "quote" );
+        transTyper = new AtomNode( tokens.get( 0 ) );
         tokens.remove( 0 );
         head.SetLeft( transTyper );
         transTyper = new ConsNode();
         head.SetRight( transTyper );
-        transTyper.SetLeft( TreeConStruct( nullHead, tokens, Getter ) );
-        ConsNode tTr = new AtomNode( 0 );
+        transTyper.SetLeft( TreeConStruct( NULL, tokens, Getter ) );
+        ConsNode tTr = new AtomNode( 0, 0 );
         transTyper.SetRight( tTr );
       } // if
-      else {
-        head.SetLeft( TreeConStruct( nullHead, tokens, Getter ) );
-        head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
-      }
-    } // if
-    else if ( tokens.get( 0 ).GetData().matches( "[(]" ) ) {
-      this.ReadSexp( tokens, Getter, 2 );
-      if ( tokens.get( 1 ).GetData().matches( "[)]" ) ) {
-        if ( head == null ) {
-          head =  new AtomNode( tokens.get( 0 ).GetColumn() );
-          tokens.remove( 0 );
+      else if ( tokens.get( 0 ).GetData().matches( "[(]" ) ) {
+        this.ReadSexp( tokens, Getter, 2 );
+        tokens.remove( 0 );
+        if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
+          head =  new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
           tokens.remove( 0 );
         } // if
         else {
-          transTyper = new AtomNode( tokens.get( 0 ).GetColumn() );
-          head.SetLeft( transTyper );
-          tokens.remove( 0 );
-          tokens.remove( 0 );
+          head = new ConsNode();
+          head.SetLeft( TreeConStruct( NULL, tokens, Getter ) );
           head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
         } // else
-      } // if
+      } // else if
       else {
-        tokens.remove( 0 );
+        Token realToken = tokens.get( 0 );
         if ( head == null ) {
-          head = new ConsNode();
-          ConsNode c = null;
-          head.SetLeft( TreeConStruct( c, tokens, Getter ) );
+          if ( realToken.GetData().matches( "[\\.()]" ) )
+            throw new ErrorMessageException( "UT", realToken.GetData(), realToken.GetLine(),
+                                             realToken.GetColumn() );
+          else if ( realToken.GetData().matches( "nil" ) || realToken.GetData().matches( "#f" ) )
+            head = new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
+          else {
+            if ( realToken.GetData().matches( "^[+-]?\\d+$" ) )
+              realToken.SetData( String.format( "%.0f", Float.valueOf( realToken.GetData() ) ) );
+            else if ( realToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) )
+              realToken.SetData( String.format( "%.3f", Float.valueOf( realToken.GetData() ) ) );
+            else if ( realToken.GetData().matches( "t" ) || realToken.GetData().matches( "#t" ) )
+              realToken.SetData( "#t" );
+            head = new AtomNode( realToken );
+          } // else
+          
+          tokens.remove( 0 );
         } // if
-        else
-          head.SetLeft( TreeConStruct( new ConsNode(), tokens, Getter ) );
+      } // else
+    } // if
+    else {
+      if ( tokens.get( 0 ).GetData().matches( "[\\.]" ) ) {
+        tokens.remove( 0 );
+        head = TreeConStruct( NULL, tokens, Getter );
+        this.ReadSexp( tokens, Getter );
+        ConsNode theRight = head;
+        while ( !theRight.IsAtomNode() ) { // to know last token column
+          theRight = theRight.GetRight();
+        } // while
+        
+        AtomNode atom = ( AtomNode ) theRight;
+        atom.GetAtom().SetColumn( tokens.get( 0 ).GetColumn() ); // end to know last token column
+        tokens.remove( 0 );
+      } // if
+      else if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
+        head =  new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
+        tokens.remove( 0 );
+      } // else if
+      else {
+        head.SetLeft( TreeConStruct( NULL, tokens, Getter ) );
         head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
       } // else
-    } // else if
-    else if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
-      // transTyper = new AtomNode( tokens.get( 0 ).GetColumn() );
-      // head.SetRight( transTyper );
-      head =  new AtomNode( tokens.get( 0 ).GetColumn() );
-      tokens.remove( 0 );
-    } // else if
-    else {
-      Token realToken = tokens.get( 0 );
-      if ( head == null ) {
-        if ( realToken.GetData().matches( "nil" ) || realToken.GetData().matches( "#f" ) )
-          head = new AtomNode( tokens.get( 0 ).GetColumn() );
-        else {
-          if ( realToken.GetData().matches( "^[+-]?\\d+$" ) )
-            realToken.SetData( String.format( "%.0f", Float.valueOf( realToken.GetData() ) ) );
-          else if ( realToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) )
-            realToken.SetData( String.format( "%.3f", Float.valueOf( realToken.GetData() ) ) );
-          else if ( realToken.GetData().matches( "t" ) || realToken.GetData().matches( "#t" ) )
-            realToken.SetData( "#t" );
-          else if ( realToken.GetData().matches( "'" ) )
-            realToken.SetData( "quote" );
-          head = new AtomNode( realToken );
-        } // else
-        
-        tokens.remove( 0 );
-      } // if
-      else {
-        ConsNode c = null;
-        if ( tokens.get( 0 ).GetData().matches( "[\\.]" ) ) {
-          tokens.remove( 0 );
-          head = TreeConStruct( c, tokens, Getter );
-          this.ReadSexp( tokens, Getter );
-          tokens.remove( 0 );
-        } // if
-        else {
-          head.SetLeft( TreeConStruct( c, tokens, Getter ) );
-          head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
-        } // else
-      } // else 
     } // else
     
     return head;
@@ -127,7 +114,7 @@ public class TreeBuilder {
   } // ReadSexp()
   
   public void TreeTravel( ConsNode head, int column, boolean aligned ) {
-    if ( head == null ) { }
+    if ( head == null ) ;
     else if ( head.IsAtomNode() ) {
       if ( !aligned ) {
         for ( int i = 0; i < column ; i++ )
@@ -167,4 +154,22 @@ public class TreeBuilder {
         TreeTravel( head.GetRight(), column, false );
     } // else
   } // TreeTravel()
+  
+  public AtomNode FindLastToken( ConsNode head ) {
+    if ( head.IsAtomNode() )
+      return ( AtomNode ) head;
+    else {
+      AtomNode left = FindLastToken( head.GetLeft() );
+      AtomNode right = FindLastToken( head.GetRight() );
+      if ( left.GetAtom().GetLine() == right.GetAtom().GetLine() )
+        if ( left.GetAtom().GetColumn() > right.GetAtom().GetColumn() )
+          return left;
+        else
+          return right;
+      else if ( left.GetAtom().GetLine() > right.GetAtom().GetLine() )
+        return left;
+      else
+        return right;
+    } // else
+  } // FindLastToken()
 } // class TreeBuilder
