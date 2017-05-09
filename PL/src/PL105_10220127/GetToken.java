@@ -10,7 +10,7 @@ public class GetToken {
   
   public GetToken( Scanner scan ) {
     this.mcolumn = 0;
-    this.mline = 1;
+    this.mline = 0;
     this.maLine = "";
     this.mscan = scan;
   } // GetToken()
@@ -21,6 +21,7 @@ public class GetToken {
       if ( this.mscan.hasNextLine() ) {
         this.maLine = this.mscan.nextLine();
         this.mcolumn = 0;
+        this.mline++;
         while ( this.maLine.startsWith( " " ) ) {
           this.maLine = this.maLine.substring( 1 );
           this.mcolumn++;
@@ -28,7 +29,7 @@ public class GetToken {
       } // if
       else
         throw new ErrorMessageException( "EOF" );
-    } // if
+    } // while
     
     while ( this.maLine.startsWith( " " ) ) {
       this.maLine = this.maLine.substring( 1 );
@@ -39,7 +40,7 @@ public class GetToken {
       this.mcolumn++;
       aToken =  new Token( this.maLine.substring( 0, 1 ), this.mline, this.mcolumn );
       this.maLine = this.maLine.substring( 1 );
-    } // else if
+    } // if
     else if ( this.maLine.startsWith( "\"" ) ) {
       int fromindex;
       if ( this.maLine.contains( "\\\"" ) &&
@@ -86,7 +87,6 @@ public class GetToken {
       aToken =  new Token( cuttenToken, this.mline, this.mcolumn );
     } // else
     
-    this.mline++;
     return aToken;
   } // CutToken()
   

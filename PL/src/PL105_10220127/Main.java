@@ -19,7 +19,7 @@ public class Main {
         head = tb.TreeConStruct( head, tokens, getter );
         getter.ResetColumn();
         if ( !tokens.isEmpty() )
-          getter.SetLine( 2 );
+          getter.SetLine( 0 );
         else
           getter.SetLine( 1 );
         if ( !head.IsAtomNode() ) {
@@ -59,7 +59,7 @@ public class Main {
           } // else if
           
           getter.Clear();
-          getter.SetLine( 1 );
+          getter.SetLine( 0 );
           tokens.clear();
         } // else
       } // catch
