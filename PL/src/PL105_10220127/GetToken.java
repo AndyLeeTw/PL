@@ -1,4 +1,4 @@
-package PL_10220127;
+package PL105_10220127;
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -66,20 +66,7 @@ public class GetToken {
           } // else
           
           this.mcolumn += cuttenToken.length();
-          if ( cuttenToken.matches( "^[+-]?\\d+$" ) ) {
-            this.mALToken.add( new Token( String.format( "%.0f", Float.valueOf( cuttenToken ) ),
-                                          this.mcolumn ) );
-          } // if
-          else if ( cuttenToken.matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
-            this.mALToken.add( new Token( String.format( "%.3f", Float.valueOf( cuttenToken ) ),
-                                          this.mcolumn ) );
-          } // else if
-          else if ( cuttenToken.matches( "t" ) || cuttenToken.matches( "#t" ) )
-            this.mALToken.add( new Token( "#t", this.mcolumn ) );
-          else if ( cuttenToken.matches( "nil" ) || cuttenToken.matches( "#f" ) )
-            this.mALToken.add( new Token( "nil", this.mcolumn ) );
-          else
-            this.mALToken.add( new Token( cuttenToken, this.mcolumn ) );
+          this.mALToken.add( new Token( cuttenToken, this.mcolumn ) );
         } // while
       } // else
     } // while

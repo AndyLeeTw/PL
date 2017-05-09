@@ -1,11 +1,11 @@
-package PL_10220127;
+package PL105_10220127;
 
 import java.util.ArrayList;
 
 public class TreeBuilder {
   public TreeBuilder() { }
   
-  public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter ) {
+  public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter ) throws ErrorMessageException {
     ConsNode transTyper;
     this.ReadSexp( tokens, Getter );
     if ( tokens.get( 0 ).GetData().matches( "[(]" ) ) {
@@ -37,28 +37,37 @@ public class TreeBuilder {
       } // else
     } // if
     else if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
-      transTyper = new AtomNode( tokens.get( 0 ).GetColumn() );
-      head.SetRight( transTyper );
+      // transTyper = new AtomNode( tokens.get( 0 ).GetColumn() );
+      // head.SetRight( transTyper );
+      head =  new AtomNode( tokens.get( 0 ).GetColumn() );
       tokens.remove( 0 );
     } // else if
     else {
       Token realToken = tokens.get( 0 );
       if ( head == null ) {
-        head = new AtomNode( realToken );
+        if ( realToken.GetData().matches( "nil" ) || realToken.GetData().matches( "#f" ) )
+          head = new AtomNode( tokens.get( 0 ).GetColumn() );
+        else {
+          if ( realToken.GetData().matches( "^[+-]?\\d+$" ) )
+            realToken.SetData( String.format( "%.0f", Float.valueOf( realToken.GetData() ) ) );
+          else if ( realToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) )
+            realToken.SetData( String.format( "%.3f", Float.valueOf( realToken.GetData() ) ) );
+          else if ( realToken.GetData().matches( "t" ) || realToken.GetData().matches( "#t" ) )
+            realToken.SetData( "#t" );
+          head = new AtomNode( realToken );
+        } // else
         tokens.remove( 0 );
       } // if
       else {
+        ConsNode c = null;
         if ( tokens.get( 0 ).GetData().matches( "[\\.]" ) ) {
           tokens.remove( 0 );
-          ConsNode c = null;
           head = TreeConStruct( c, tokens, Getter );
           this.ReadSexp( tokens, Getter );
           tokens.remove( 0 );
         } // if
         else {
-          transTyper = new AtomNode( realToken );
-          tokens.remove( 0 );
-          head.SetLeft( transTyper );
+          head.SetLeft( TreeConStruct( c, tokens, Getter ) );
           head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
         } // else
       } // else 
@@ -67,7 +76,7 @@ public class TreeBuilder {
     return head;
   } // TreeConStruct()
   
-  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter ) {
+  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter ) throws ErrorMessageException {
     if ( tokens.isEmpty() ) {
       Getter.CutToken();
       if ( !Getter.IsEmpty() ) {
@@ -75,10 +84,12 @@ public class TreeBuilder {
         for ( int i = 0; i < a.size() ; i++ )
           tokens.add( a.get( i ) );
       } // if
+      else
+        throw new ErrorMessageException( "EOF" );
     } // if
   } // ReadSexp()
   
-  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter, int tokenssize ) {
+  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter, int tokenssize ) throws ErrorMessageException {
     if ( tokens.size() < tokenssize ) {
       Getter.CutToken();
       if ( !Getter.IsEmpty() ) {
@@ -86,8 +97,11 @@ public class TreeBuilder {
         for ( int i = 0; i < a.size() ; i++ )
           tokens.add( a.get( i ) );
       } // if
+      else
+        throw new ErrorMessageException( "EOF" );
     } // if
   } // ReadSexp()
+  
   public void TreeTravel( ConsNode head, int column, boolean aligned ) {
     if ( head == null ) { }
     else if ( head.IsAtomNode() ) {
@@ -109,7 +123,7 @@ public class TreeBuilder {
         TreeTravel( head.GetLeft(), column + 1, true );
       } // if
       else
-        TreeTravel( head.GetLeft(), column, aligned ); // aligned will be true in initial time 
+        TreeTravel( head.GetLeft(), column, aligned ); // aligned will be true in initial time
       if ( head.GetLeft() != null && !head.GetLeft().IsAtomNode() ) {
         for ( int i = 0; i < column ; i++ )
           System.out.print( "  " );
