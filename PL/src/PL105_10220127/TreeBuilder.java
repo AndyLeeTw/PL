@@ -24,8 +24,8 @@ public class TreeBuilder {
         transTyper.SetRight( tTr );
       } // if
       else if ( tokens.get( 0 ).GetData().matches( "[(]" ) ) {
-        this.ReadSexp( tokens, Getter, 2 );
         tokens.remove( 0 );
+        this.ReadSexp( tokens, Getter );
         if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
           head =  new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
           tokens.remove( 0 );
@@ -63,13 +63,6 @@ public class TreeBuilder {
         tokens.remove( 0 );
         head = TreeConStruct( NULL, tokens, Getter );
         this.ReadSexp( tokens, Getter );
-        ConsNode theRight = head;
-        while ( !theRight.IsAtomNode() ) { // to know last token column
-          theRight = theRight.GetRight();
-        } // while
-        
-        AtomNode atom = ( AtomNode ) theRight;
-        atom.GetAtom().SetColumn( tokens.get( 0 ).GetColumn() ); // end to know last token column
         tokens.remove( 0 );
       } // if
       else if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
@@ -88,28 +81,9 @@ public class TreeBuilder {
   public void ReadSexp( ArrayList<Token> tokens, GetToken Getter )
   throws ErrorMessageException {
     if ( tokens.isEmpty() ) {
-      Getter.CutToken();
-      if ( !Getter.IsEmpty() ) {
-        ArrayList<Token> a = Getter.GetList();
-        for ( int i = 0; i < a.size() ; i++ )
-          tokens.add( a.get( i ) );
-      } // if
-      else
-        throw new ErrorMessageException( "EOF" );
-    } // if
-  } // ReadSexp()
-  
-  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter, int tokenssize )
-  throws ErrorMessageException {
-    if ( tokens.size() < tokenssize ) {
-      Getter.CutToken();
-      if ( !Getter.IsEmpty() ) {
-        ArrayList<Token> a = Getter.GetList();
-        for ( int i = 0; i < a.size() ; i++ )
-          tokens.add( a.get( i ) );
-      } // if
-      else
-        throw new ErrorMessageException( "EOF" );
+      Token aToken = Getter.CutToken();
+      if ( aToken != null )
+        tokens.add( aToken );
     } // if
   } // ReadSexp()
   
@@ -154,22 +128,4 @@ public class TreeBuilder {
         TreeTravel( head.GetRight(), column, false );
     } // else
   } // TreeTravel()
-  
-  public AtomNode FindLastToken( ConsNode head ) {
-    if ( head.IsAtomNode() )
-      return ( AtomNode ) head;
-    else {
-      AtomNode left = FindLastToken( head.GetLeft() );
-      AtomNode right = FindLastToken( head.GetRight() );
-      if ( left.GetAtom().GetLine() == right.GetAtom().GetLine() )
-        if ( left.GetAtom().GetColumn() > right.GetAtom().GetColumn() )
-          return left;
-        else
-          return right;
-      else if ( left.GetAtom().GetLine() > right.GetAtom().GetLine() )
-        return left;
-      else
-        return right;
-    } // else
-  } // FindLastToken()
 } // class TreeBuilder

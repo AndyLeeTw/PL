@@ -17,15 +17,9 @@ public class Main {
       head = null;
       try {
         head = tb.TreeConStruct( head, tokens, getter );
-        if ( !tokens.isEmpty() ) {
-          AtomNode atom = tb.FindLastToken( head );
-          for ( int i = 0; i < tokens.size() ; i++ ) {
-            tokens.get( i ).SetLine( 1 );
-            tokens.get( i ).SetColumn( tokens.get( i ).GetColumn() - atom.GetAtom().GetColumn() );
-          } // for
-          
+        getter.ResetColumn();
+        if ( !tokens.isEmpty() )
           getter.SetLine( 2 );
-        } // if
         else
           getter.SetLine( 1 );
         if ( !head.IsAtomNode() ) {
@@ -64,6 +58,7 @@ public class Main {
                                 e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
           } // else if
           
+          getter.Clear();
           getter.SetLine( 1 );
           tokens.clear();
         } // else
