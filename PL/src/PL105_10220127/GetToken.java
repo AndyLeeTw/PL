@@ -17,26 +17,26 @@ public class GetToken {
   
   public Token CutToken() throws ErrorMessageException {
     Token aToken = null;
-    while ( this.maLine.startsWith( ";" ) || this.maLine.length() == 0 ) {
+    if ( this.maLine.startsWith( ";" ) || this.maLine.length() == 0 ) {
       if ( this.mscan.hasNextLine() ) {
         this.maLine = this.mscan.nextLine();
         this.mcolumn = 0;
         this.mline++;
-        while ( this.maLine.startsWith( " " ) ) {
-          this.maLine = this.maLine.substring( 1 );
-          this.mcolumn++;
-        } // while
       } // if
       else
         throw new ErrorMessageException( "EOF" );
-    } // while
+    } // if
     
-    while ( this.maLine.startsWith( " " ) ) {
+    if ( this.maLine.startsWith( " " ) ) {
       this.maLine = this.maLine.substring( 1 );
       this.mcolumn++;
-    } // while
-    
-    if ( this.maLine.startsWith( "(" ) || this.maLine.startsWith( ")" ) || this.maLine.startsWith( "'" ) ) {
+      aToken = this.CutToken();
+    } // if
+    else if ( this.maLine.startsWith( ";" ) || this.maLine.length() == 0 ) {
+      aToken = this.CutToken();
+    } // else if
+    else if ( this.maLine.startsWith( "(" ) || this.maLine.startsWith( ")" ) ||
+              this.maLine.startsWith( "'" ) ) {
       this.mcolumn++;
       aToken =  new Token( this.maLine.substring( 0, 1 ), this.mline, this.mcolumn );
       this.maLine = this.maLine.substring( 1 );
@@ -103,6 +103,6 @@ public class GetToken {
   } // ResetColumn()
   
   public boolean IsEmpty() {
-    return this.maLine.isEmpty();
+    return this.maLine.isEmpty() || this.maLine.matches( " *| *;.*" );
   } // IsEmpty()
 } // class GetToken
