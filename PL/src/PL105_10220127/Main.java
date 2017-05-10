@@ -53,8 +53,12 @@ public class Main {
             System.out.println( "ERROR (no closing quote) : END-OF-LINE encountered at Line " + 
                                 e.GetLine() + " Column " + e.GetColumn() );
           } // if
-          else if ( e.GetErrorCode().matches( "UT" ) ) {
+          else if ( e.GetErrorCode().matches( "UTL" ) ) {
             System.out.println( "ERROR (unexpected token) : atom or '(' expected when token at Line " +
+                                e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
+          } // else if
+          else if ( e.GetErrorCode().matches( "UTR" ) ) {
+            System.out.println( "ERROR (unexpected token) : ')' expected when token at Line " +
                                 e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
           } // else if
           

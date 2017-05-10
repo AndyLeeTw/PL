@@ -40,7 +40,7 @@ public class TreeBuilder {
         Token realToken = tokens.get( 0 );
         if ( head == null ) {
           if ( realToken.GetData().matches( "[\\.()]" ) )
-            throw new ErrorMessageException( "UT", realToken.GetData(), realToken.GetLine(),
+            throw new ErrorMessageException( "UTL", realToken.GetData(), realToken.GetLine(),
                                              realToken.GetColumn() );
           else if ( realToken.GetData().matches( "nil" ) || realToken.GetData().matches( "#f" ) )
             head = new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
@@ -63,7 +63,11 @@ public class TreeBuilder {
         tokens.remove( 0 );
         head = TreeConStruct( NULL, tokens, Getter );
         this.ReadSexp( tokens, Getter );
-        tokens.remove( 0 );
+        if ( tokens.get( 0 ).GetData().matches( "[)]" ) )
+          tokens.remove( 0 );
+        else
+          throw new ErrorMessageException( "UTR", tokens.get( 0 ).GetData(), tokens.get( 0 ).GetLine(),
+                                           tokens.get( 0 ).GetColumn() );
       } // if
       else if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
         head =  new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
