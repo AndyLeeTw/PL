@@ -17,7 +17,7 @@ public class Main {
       head = null;
       try {
         head = tb.TreeConStruct( head, tokens, getter );
-        head = tb.Eval( head, true );
+        //head = tb.Eval( head, true );
         getter.ResetColumn();
         if ( getter.IsEmpty() )
           getter.SetLine( 0 );
@@ -30,14 +30,9 @@ public class Main {
             if ( transTyperL.GetAtom().GetData().matches( "exit" ) && transTyperR.IsNil() )
               throw new ErrorMessageException( "EOFT" ) ;
           } // if
-          
-          System.out.print( "\n> ( " );
         } // if
-        else
-          System.out.print( "\n> " );
-        tb.TreeTravel( head, 1, true );
-        if ( !head.IsAtomNode() )
-          System.out.println( ")" );
+        System.out.print( "\n> " );
+        tb.TreeTravel( head , 0, false );
       } // try    
       catch ( ErrorMessageException e ) {
         System.out.print( "\n> " );
@@ -70,9 +65,9 @@ public class Main {
           tokens.clear();
         } // else
       } // catch
-      catch ( SystemMessageException e ) {
-        System.out.println( e.GetSystemMessage() );
-      } // catch
+      //catch ( SystemMessageException e ) {
+        //System.out.println( e.GetSystemMessage() );
+      //} // catch
     } // while
     
     System.out.println( "\nThanks for using OurScheme!" );

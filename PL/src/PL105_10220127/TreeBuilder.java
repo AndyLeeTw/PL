@@ -5,7 +5,7 @@ import java.util.HashMap;
 
 public class TreeBuilder {
   private ConsNode transTyper;
-  private HashMap<String, ConsNode>symbolTable = new HashMap<String, ConsNode>();
+  private HashMap<String, AtomNode>symbolTable = new HashMap<String, AtomNode>();
   public TreeBuilder() { }
   
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
@@ -38,24 +38,26 @@ public class TreeBuilder {
           ConsNode tTr = new AtomNode( 0, 0 );
           this.transTyper.SetRight( tTr );
         } // if
-        else if ( aToken.GetData().matches( "[\\.()]" ) )
+        else if ( aToken.GetData().matches( "[\\.]" ) )
           throw new ErrorMessageException( "UTL", aToken.GetData(), aToken.GetLine(),
                                            aToken.GetColumn() );
-        else if ( aToken.GetData().matches( "nil" ) || aToken.GetData().matches( "#f" ) )
-          head = new AtomNode( aToken.GetLine(), aToken.GetColumn() );
         else {
-          if ( aToken.GetData().matches( "^[+-]?\\d+$" ) ) {
+          if ( aToken.GetData().matches( "quote" ) )
+            head = new AtomNode( aToken, DataType.QUOTE );
+          else if ( aToken.GetData().matches( "nil" ) || aToken.GetData().matches( "#f" ) )
+            head = new AtomNode( aToken.GetLine(), aToken.GetColumn() );
+          else if ( aToken.GetData().matches( "^[+-]?\\d+$" ) ) {
             aToken.SetData( String.format( "%.0f", Float.valueOf( aToken.GetData() ) ) );
             head = new AtomNode( aToken, DataType.INT );
-          }
+          } // else if
           else if ( aToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
             aToken.SetData( String.format( "%.3f", Float.valueOf( aToken.GetData() ) ) );
             head = new AtomNode( aToken, DataType.FLOAT );
-          }
+          } // else if
           else if ( aToken.GetData().matches( "t" ) || aToken.GetData().matches( "#t" ) ) {
             aToken.SetData( "#t" );
             head = new AtomNode( aToken, DataType.T );
-          }
+          } // else if
           else
             head = new AtomNode( aToken, DataType.SYMBOL );
           tokens.remove( 0 );
@@ -99,66 +101,77 @@ public class TreeBuilder {
         return head;
       else {
         if ( this.symbolTable.containsKey( ( ( AtomNode ) head).GetAtom().GetData() ) )
-          return this.symbolTable.get( ( ( AtomNode ) head).GetAtom() );
+          return this.symbolTable.get( ( ( AtomNode ) head).GetAtom().GetData() );
         else
           throw new ErrorMessageException( "US", ( ( AtomNode ) head ).GetAtom().GetData() );
       }
     }
     else {
-      if ( head.GetLeft().IsAtomNode() ) {
-        AtomNode Left = ( AtomNode ) head.GetLeft();
-        if ( Left.GetDataType() == DataType.SYMBOL ) {
-          if ( Left.GetAtom().GetData().matches( "clean-environment" ) ) {
-            this.symbolTable.clear();
-            System.out.println( "environment cleaned" );
-            throw new SystemMessageException("");
-          }
-          if ( Left.GetAtom().GetData().matches( "cons" ) ) {
-            return head.GetRight();
-          }
-          else if ( Left.GetAtom().GetData().matches( "define" ) ) {
-            System.out.println("fsdfsdsd");
-            this.symbolTable.put( ( ( AtomNode ) head.GetRight().GetLeft() ).GetAtom().GetData(), 
-                                  ( ( AtomNode ) head.GetRight().GetRight() ) );
-            System.out.println("fsdfsdsd");
-            System.out.println( Left.GetAtom().GetData() + " defined" );
-            throw new SystemMessageException("");
-          }
+      AtomNode function = ( AtomNode ) head.GetLeft();
+      ConsNode sexp = head.GetRight();
+      if ( function.GetDataType() == DataType.SYMBOL ) {
+        if ( function.GetAtom().GetData().matches( "clean-environment" ) ) {
+          this.symbolTable.clear();
+          throw new SystemMessageException( "environment cleaned" );
+        }
+        if ( function.GetAtom().GetData().matches( "cons" ) ) {
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          sexp = sexp.GetRight();
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          return sexp;
+        }
+        else if ( function.GetAtom().GetData().matches( "list" ) ) {
+          ConsNode sexpNow = sexp;
+          do {
+            sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false ) );
+            sexpNow = sexpNow.GetRight();
+          } while( !sexpNow.IsAtomNode() );
+          
+          return sexp;
+        }
+        else if ( function.GetAtom().GetData().matches( "define" ) ) {
+          this.symbolTable.put( ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData(), 
+                                ( ( AtomNode ) sexp.GetRight().GetLeft() ) );
+          throw new SystemMessageException( ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData() + " defined" );
         }
       }
-    }
+      else if ( function.GetDataType() == DataType.QUOTE )
+        return sexp.GetLeft();
+      else
+        throw new SystemMessageException( "ERROR (attempt to apply non-function) : " + function.GetAtom().GetData() );
+    } // else
+    
     return head;
   } // Eval()
   
-  public void TreeTravel( ConsNode head, int column, boolean aligned ) {
+  public void TreeTravel( ConsNode head, int column, boolean firstLine ) {
     if ( head == null ) ;
     else if ( head.IsAtomNode() ) {
-      if ( !aligned ) {
+      //if ( !aligned ) {
         for ( int i = 0; i < column ; i++ )
           System.out.print( "  " );
-      } // if
+      //} // if*/
       
       System.out.println( head.ToString() );
     } // else if
     else {
-      if ( head.GetLeft() != null && !head.GetLeft().IsAtomNode() ) {
-        if ( !aligned ) {
-          for ( int i = 0; i < column ; i++ )
-            System.out.print( "  " );
-        } // if
-        
-        System.out.print( "( " );
+      //if ( !aligned ) {
+        for ( int i = 0; i < column ; i++ )
+          System.out.print( "  " );
+      //} // if*/
+      System.out.print( "( " );
+      if ( !head.GetLeft().IsAtomNode() ) {
         TreeTravel( head.GetLeft(), column + 1, true );
       } // if
       else
-        TreeTravel( head.GetLeft(), column, aligned ); // aligned will be true in initial time
+        TreeTravel( head.GetLeft(), column + 1, firstLine ); // aligned will be true in initial time
       if ( head.GetLeft() != null && !head.GetLeft().IsAtomNode() ) {
         for ( int i = 0; i < column ; i++ )
           System.out.print( "  " );
-        System.out.println( ")" );
+        //System.out.println( ")" );
       } // if
       
-      if ( head.GetRight() != null && head.GetRight().IsAtomNode() ) {
+      if ( head.GetRight().IsAtomNode() ) {
         AtomNode atom = ( AtomNode ) head.GetRight();
         if ( !atom.IsNil() ) {
           for ( int i = 0; i < column ; i++ )
@@ -169,6 +182,7 @@ public class TreeBuilder {
       } // if
       else
         TreeTravel( head.GetRight(), column, false );
+      System.out.println( ")" );
     } // else
   } // TreeTravel()
 } // class TreeBuilder
