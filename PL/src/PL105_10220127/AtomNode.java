@@ -1,6 +1,7 @@
 package PL105_10220127;
 
 public class AtomNode extends ConsNode {
+  private int mDataType;
   private Token matom;
   private boolean mNil;
   
@@ -10,9 +11,10 @@ public class AtomNode extends ConsNode {
     SetNil( true );
   } // AtomNode()
     
-  public AtomNode( Token atomT ) {
+  public AtomNode( Token atomT, int datatype ) {
     // TODO Auto-generated constructor stub
     super( true );
+    this.mDataType = datatype;
     SetAtom( atomT );
   } // AtomNode()
     
@@ -35,5 +37,8 @@ public class AtomNode extends ConsNode {
   public String ToString() {
     return matom.GetData();
   } // ToString()
-
+  
+  public int GetDataType() {
+    return this.mDataType;
+  } // GetDataType()
 } // class AtomNode

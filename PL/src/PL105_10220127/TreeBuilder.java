@@ -1,80 +1,84 @@
 package PL105_10220127;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class TreeBuilder {
+  private ConsNode transTyper;
+  private HashMap<String, ConsNode>symbolTable = new HashMap<String, ConsNode>();
   public TreeBuilder() { }
   
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
   throws ErrorMessageException {
-    ConsNode transTyper;
-    final ConsNode NULL = null;
-    this.ReadSexp( tokens, Getter );
+    Token aToken = this.ReadSexp( tokens, Getter );
     if ( head == null ) {
-      if ( tokens.get( 0 ).GetData().matches( "'" ) ) {
-        head = new ConsNode();
-        tokens.get( 0 ).SetData( "quote" );
-        transTyper = new AtomNode( tokens.get( 0 ) );
+      if ( aToken.GetData().matches( "[(]" ) ) {
         tokens.remove( 0 );
-        head.SetLeft( transTyper );
-        transTyper = new ConsNode();
-        head.SetRight( transTyper );
-        transTyper.SetLeft( TreeConStruct( NULL, tokens, Getter ) );
-        ConsNode tTr = new AtomNode( 0, 0 );
-        transTyper.SetRight( tTr );
-      } // if
-      else if ( tokens.get( 0 ).GetData().matches( "[(]" ) ) {
-        tokens.remove( 0 );
-        this.ReadSexp( tokens, Getter );
-        if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
-          head =  new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
+        aToken = this.ReadSexp( tokens, Getter );
+        if ( aToken.GetData().matches( "[)]" ) ) {
+          head =  new AtomNode( aToken.GetLine(), aToken.GetColumn() );
           tokens.remove( 0 );
         } // if
         else {
           head = new ConsNode();
-          head.SetLeft( TreeConStruct( NULL, tokens, Getter ) );
+          head.SetLeft( TreeConStruct( DataType.NULL, tokens, Getter ) );
           head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
         } // else
       } // else if
       else {
-        Token realToken = tokens.get( 0 );
-        if ( head == null ) {
-          if ( realToken.GetData().matches( "[\\.()]" ) )
-            throw new ErrorMessageException( "UTL", realToken.GetData(), realToken.GetLine(),
-                                             realToken.GetColumn() );
-          else if ( realToken.GetData().matches( "nil" ) || realToken.GetData().matches( "#f" ) )
-            head = new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
-          else {
-            if ( realToken.GetData().matches( "^[+-]?\\d+$" ) )
-              realToken.SetData( String.format( "%.0f", Float.valueOf( realToken.GetData() ) ) );
-            else if ( realToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) )
-              realToken.SetData( String.format( "%.3f", Float.valueOf( realToken.GetData() ) ) );
-            else if ( realToken.GetData().matches( "t" ) || realToken.GetData().matches( "#t" ) )
-              realToken.SetData( "#t" );
-            head = new AtomNode( realToken );
-          } // else
-          
+        if ( aToken.GetData().matches( "'" ) ) {
+          head = new ConsNode();
+          aToken.SetData( "quote" );
+          this.transTyper = new AtomNode( aToken, DataType.QUOTE );
           tokens.remove( 0 );
+          head.SetLeft( this.transTyper );
+          this.transTyper = new ConsNode();
+          head.SetRight( this.transTyper );
+          this.transTyper.SetLeft( TreeConStruct( DataType.NULL, tokens, Getter ) );
+          ConsNode tTr = new AtomNode( 0, 0 );
+          this.transTyper.SetRight( tTr );
         } // if
+        else if ( aToken.GetData().matches( "[\\.()]" ) )
+          throw new ErrorMessageException( "UTL", aToken.GetData(), aToken.GetLine(),
+                                           aToken.GetColumn() );
+        else if ( aToken.GetData().matches( "nil" ) || aToken.GetData().matches( "#f" ) )
+          head = new AtomNode( aToken.GetLine(), aToken.GetColumn() );
+        else {
+          if ( aToken.GetData().matches( "^[+-]?\\d+$" ) ) {
+            aToken.SetData( String.format( "%.0f", Float.valueOf( aToken.GetData() ) ) );
+            head = new AtomNode( aToken, DataType.INT );
+          }
+          else if ( aToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
+            aToken.SetData( String.format( "%.3f", Float.valueOf( aToken.GetData() ) ) );
+            head = new AtomNode( aToken, DataType.FLOAT );
+          }
+          else if ( aToken.GetData().matches( "t" ) || aToken.GetData().matches( "#t" ) ) {
+            aToken.SetData( "#t" );
+            head = new AtomNode( aToken, DataType.T );
+          }
+          else
+            head = new AtomNode( aToken, DataType.SYMBOL );
+          tokens.remove( 0 );
+        } // else
       } // else
     } // if
     else {
-      if ( tokens.get( 0 ).GetData().matches( "[\\.]" ) ) {
+      if ( aToken.GetData().matches( "[\\.]" ) ) {
         tokens.remove( 0 );
-        head = TreeConStruct( NULL, tokens, Getter );
-        this.ReadSexp( tokens, Getter );
-        if ( tokens.get( 0 ).GetData().matches( "[)]" ) )
-          tokens.remove( 0 );
+        head = TreeConStruct( DataType.NULL, tokens, Getter );
+        aToken = this.ReadSexp(tokens, Getter);
+        if ( !aToken.GetData().matches( "[)]" ) )
+          throw new ErrorMessageException( "UTR", aToken.GetData(), aToken.GetLine(),
+              aToken.GetColumn() );
         else
-          throw new ErrorMessageException( "UTR", tokens.get( 0 ).GetData(), tokens.get( 0 ).GetLine(),
-                                           tokens.get( 0 ).GetColumn() );
+          tokens.remove( 0 );
       } // if
-      else if ( tokens.get( 0 ).GetData().matches( "[)]" ) ) {
-        head =  new AtomNode( tokens.get( 0 ).GetLine(), tokens.get( 0 ).GetColumn() );
+      else if ( aToken.GetData().matches( "[)]" ) ) {
+        head =  new AtomNode( aToken.GetLine(), aToken.GetColumn() );
         tokens.remove( 0 );
       } // else if
       else {
-        head.SetLeft( TreeConStruct( NULL, tokens, Getter ) );
+        head.SetLeft( TreeConStruct( DataType.NULL, tokens, Getter ) );
         head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
       } // else
     } // else
@@ -82,14 +86,49 @@ public class TreeBuilder {
     return head;
   } // TreeConStruct()
   
-  public void ReadSexp( ArrayList<Token> tokens, GetToken Getter )
+  public Token ReadSexp( ArrayList<Token> tokens, GetToken Getter )
   throws ErrorMessageException {
-    if ( tokens.isEmpty() ) {
-      Token aToken = Getter.CutToken();
-      if ( aToken != null )
-        tokens.add( aToken );
-    } // if
+    if ( tokens.isEmpty() )
+      tokens.add( Getter.CutToken() );
+    return tokens.get( 0 );
   } // ReadSexp()
+  
+  public ConsNode Eval( ConsNode head, boolean isTop ) throws SystemMessageException, ErrorMessageException {
+    if ( head.IsAtomNode() ) {
+      if ( ( ( AtomNode ) head ).GetDataType() != DataType.SYMBOL )
+        return head;
+      else {
+        if ( this.symbolTable.containsKey( ( ( AtomNode ) head).GetAtom().GetData() ) )
+          return this.symbolTable.get( ( ( AtomNode ) head).GetAtom() );
+        else
+          throw new ErrorMessageException( "US", ( ( AtomNode ) head ).GetAtom().GetData() );
+      }
+    }
+    else {
+      if ( head.GetLeft().IsAtomNode() ) {
+        AtomNode Left = ( AtomNode ) head.GetLeft();
+        if ( Left.GetDataType() == DataType.SYMBOL ) {
+          if ( Left.GetAtom().GetData().matches( "clean-environment" ) ) {
+            this.symbolTable.clear();
+            System.out.println( "environment cleaned" );
+            throw new SystemMessageException("");
+          }
+          if ( Left.GetAtom().GetData().matches( "cons" ) ) {
+            return head.GetRight();
+          }
+          else if ( Left.GetAtom().GetData().matches( "define" ) ) {
+            System.out.println("fsdfsdsd");
+            this.symbolTable.put( ( ( AtomNode ) head.GetRight().GetLeft() ).GetAtom().GetData(), 
+                                  ( ( AtomNode ) head.GetRight().GetRight() ) );
+            System.out.println("fsdfsdsd");
+            System.out.println( Left.GetAtom().GetData() + " defined" );
+            throw new SystemMessageException("");
+          }
+        }
+      }
+    }
+    return head;
+  } // Eval()
   
   public void TreeTravel( ConsNode head, int column, boolean aligned ) {
     if ( head == null ) ;

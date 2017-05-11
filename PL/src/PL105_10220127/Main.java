@@ -17,6 +17,7 @@ public class Main {
       head = null;
       try {
         head = tb.TreeConStruct( head, tokens, getter );
+        head = tb.Eval( head, true );
         getter.ResetColumn();
         if ( getter.IsEmpty() )
           getter.SetLine( 0 );
@@ -37,7 +38,7 @@ public class Main {
         tb.TreeTravel( head, 1, true );
         if ( !head.IsAtomNode() )
           System.out.println( ")" );
-      } // try
+      } // try    
       catch ( ErrorMessageException e ) {
         System.out.print( "\n> " );
         if ( e.GetErrorCode().startsWith( "EOF" ) ) {
@@ -61,11 +62,16 @@ public class Main {
             System.out.println( "ERROR (unexpected token) : ')' expected when token at Line " +
                                 e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
           } // else if
-          
+          else if ( e.GetErrorCode().matches( "US" ) ) {
+            System.out.println( "ERROR (unbound symbol) : " + e.GetAtom() );
+          } // if
           getter.Clear();
           getter.SetLine( 0 );
           tokens.clear();
         } // else
+      } // catch
+      catch ( SystemMessageException e ) {
+        System.out.println( e.GetSystemMessage() );
       } // catch
     } // while
     

@@ -10,6 +10,11 @@ public class ErrorMessageException extends Exception {
     this.merrorCode = errorCode;
   } // ErrorMessageException()
   
+  public ErrorMessageException( String errorCode, String unboundSymbol ) {
+    this.mAtom = unboundSymbol;
+    this.merrorCode = errorCode;
+  } // ErrorMessageException()
+  
   public ErrorMessageException( String errorCode, int Line, int Column ) {
     this.merrorCode = errorCode;
     this.mLine = Line;
