@@ -90,7 +90,7 @@ public class TreeBuilder {
     return head;
   } // TreeConStruct()
   
-  public Token ReadSexp( ArrayList<Token> tokens, GetToken Getter )
+  private Token ReadSexp( ArrayList<Token> tokens, GetToken Getter )
   throws SystemMessageException {
     if ( tokens.isEmpty() )
       tokens.add( Getter.CutToken() );
@@ -158,6 +158,10 @@ public class TreeBuilder {
           return this.DecideTorNil( sexp.GetLeft(), DataType.T, DataType.NIL );
         else if ( function.GetAtom().GetData().matches( "symbol[?]" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.SYMBOL );
+        else if ( function.GetAtom().GetData().matches( "[+]" ) )
+          return this.Plus( sexp, true );
+        else if ( function.GetAtom().GetData().matches( "[-]" ) )
+          return this.Plus( sexp, false );
       } // if
       else if ( function.GetDataType() == DataType.QUOTE )
         return sexp.GetLeft();
@@ -167,6 +171,29 @@ public class TreeBuilder {
     
     return head;
   } // Eval()
+  
+  private ConsNode Plus( ConsNode sexp, boolean isPlus ) throws SystemMessageException {
+    ConsNode sexpNow = sexp;
+    float count = 0;
+    if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
+                                           DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T ) {
+      count += Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
+      while ( !sexpNow.GetRight().IsAtomNode() ) {
+        sexpNow = sexpNow.GetRight();
+        if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
+                                               DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T )
+          if ( isPlus )
+            count += Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
+          else
+            count -= Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
+      }
+    }
+    Float intValue = new Float( count );
+    if ( intValue.intValue() == count )
+      return new AtomNode( new Token( String.format( "%.0f", count ), 0 , 0 ), DataType.INT );
+    else
+      return new AtomNode( new Token( String.format( "%.3f", count ), 0 , 0 ), DataType.FLOAT );
+  }
   
   private ConsNode DecideTorNil( ConsNode sexp, int dataType ) throws SystemMessageException {
     sexp = this.Eval( sexp, false );
