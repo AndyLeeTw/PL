@@ -11,7 +11,7 @@ public class TreeBuilder {
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
   throws SystemMessageException {
     Token aToken = this.ReadSexp( tokens, Getter );
-    if ( head == null ) {
+    if ( head == null ) { // left leaf or initial
       if ( aToken.GetData().matches( "[(]" ) ) {
         tokens.remove( 0 );
         aToken = this.ReadSexp( tokens, Getter );
@@ -25,7 +25,7 @@ public class TreeBuilder {
           head.SetRight( TreeConStruct( new ConsNode(), tokens, Getter ) );
         } // else
       } // if
-      else {
+      else {            // right leaf
         if ( aToken.GetData().matches( "'" ) ) {
           head = new ConsNode();
           aToken.SetData( "quote" );
@@ -147,17 +147,17 @@ public class TreeBuilder {
             return new AtomNode( new Token( "#t", 0, 0 ), DataType.T );
         } // else if
         else if ( function.GetAtom().GetData().matches( "null[?]" ) )
-          return this.DecideTorNil( sexp, DataType.NIL );
+          return this.DecideTorNil( sexp.GetLeft(), DataType.NIL );
         else if ( function.GetAtom().GetData().matches( "integer[?]" ) )
-          return this.DecideTorNil( sexp, DataType.INT );
+          return this.DecideTorNil( sexp.GetLeft(), DataType.INT );
         else if ( function.GetAtom().GetData().matches( "real[?]|number[?]" ) )
-          return this.DecicideTorNil( sexp, DataType.INT, DataType.FLOAT );
+          return this.DecideTorNil( sexp.GetLeft(), DataType.INT, DataType.FLOAT );
         else if ( function.GetAtom().GetData().matches( "string[?]" ) )
-          return this.DecideTorNil( sexp, DataType.STRING );
+          return this.DecideTorNil( sexp.GetLeft(), DataType.STRING );
         else if ( function.GetAtom().GetData().matches( "boolean[?]" ) )
-          return this.DecicideTorNil( sexp, DataType.T, DataType.NIL );
+          return this.DecideTorNil( sexp.GetLeft(), DataType.T, DataType.NIL );
         else if ( function.GetAtom().GetData().matches( "symbol[?]" ) )
-          return this.DecideTorNil( sexp, DataType.SYMBOL );
+          return this.DecideTorNil( sexp.GetLeft(), DataType.SYMBOL );
       } // if
       else if ( function.GetDataType() == DataType.QUOTE )
         return sexp.GetLeft();
@@ -168,18 +168,29 @@ public class TreeBuilder {
     return head;
   } // Eval()
   
-  private ConsNode DecideTorNil( ConsNode sexp, int dataType ) {
-    if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == dataType )
+  private ConsNode DecideTorNil( ConsNode sexp, int dataType ) throws SystemMessageException {
+    sexp = this.Eval( sexp, false );
+    if ( sexp.IsAtomNode() )
+      if ( ( ( AtomNode ) sexp ).GetDataType() == dataType )
+        return new AtomNode( new Token( "#t", 0, 0 ), DataType.T );
+      else
+        return new AtomNode( 0, 0 );
+    else {
+      sexp = this.Eval( sexp, false );
+      if ( sexp.IsAtomNode() )
+        return this.DecideTorNil( sexp, dataType );
+      else
+        return new AtomNode( 0, 0 ); 
+    }
+  } // DecideTorNil()
+  
+  private ConsNode DecideTorNil( ConsNode sexp, int dataType1, int dataType2 )
+  throws SystemMessageException {
+    if ( ! ( ( AtomNode ) this.DecideTorNil( sexp, dataType1 ) ).IsNil() ||
+         ! ( ( AtomNode ) this.DecideTorNil( sexp, dataType2 ) ).IsNil() )
       return new AtomNode( new Token( "#t", 0, 0 ), DataType.T );
     else
       return new AtomNode( 0, 0 );
-  } // DecideTorNil()
-  
-  private ConsNode DecicideTorNil( ConsNode sexp, int dataType1, int dataType2 ) {
-    if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == dataType1 )
-      return new AtomNode( new Token( "#t", 0, 0 ), DataType.T );
-    else
-      return this.DecideTorNil( sexp, dataType2 );
   } // DecideTorNil()
   
   public void TreeTravel( ConsNode head, int column, boolean isTop, boolean needSpace ) {
