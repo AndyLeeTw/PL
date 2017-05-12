@@ -9,5 +9,4 @@ public class DataType {
   public static final int STRING = 4;
   public static final int SYMBOL = 5;
   public static final int QUOTE = 6;
-  
 } // class DataType

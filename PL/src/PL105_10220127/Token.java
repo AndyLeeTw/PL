@@ -13,6 +13,7 @@ public class Token {
   
   public Token( Token TokenT ) {
     this.mData = TokenT.GetData();
+    this.mLine = TokenT.GetLine();
     this.mColumn = TokenT.GetColumn();
   } // Token()
   

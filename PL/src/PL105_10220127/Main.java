@@ -17,7 +17,7 @@ public class Main {
       head = null;
       try {
         head = tb.TreeConStruct( head, tokens, getter );
-        //head = tb.Eval( head, true );
+        head = tb.Eval( head, true );
         getter.ResetColumn();
         if ( getter.IsEmpty() )
           getter.SetLine( 0 );
@@ -28,46 +28,46 @@ public class Main {
             AtomNode transTyperL = ( AtomNode ) head.GetLeft();
             AtomNode transTyperR = ( AtomNode ) head.GetRight();
             if ( transTyperL.GetAtom().GetData().matches( "exit" ) && transTyperR.IsNil() )
-              throw new ErrorMessageException( "EOFT" ) ;
+              throw new SystemMessageException( "EOFT" ) ;
           } // if
         } // if
+        
         System.out.print( "\n> " );
-        tb.TreeTravel( head , 0, false );
+        tb.TreeTravel( head, 0, true, false );
       } // try    
-      catch ( ErrorMessageException e ) {
+      catch ( SystemMessageException e ) {        
         System.out.print( "\n> " );
-        if ( e.GetErrorCode().startsWith( "EOF" ) ) {
-          if ( e.GetErrorCode().matches( "EOF" ) ) {
+        if ( e.GetSystemCode().startsWith( "EOF" ) ) {
+          if ( e.GetSystemCode().matches( "EOF" ) ) {
             System.out.print( "ERROR (no more input) : END-OF-FILE encountered" );
           } // if
-          else if ( e.GetErrorCode().matches( "EOFT" ) ) ;
+          else if ( e.GetSystemCode().matches( "EOFT" ) ) ;
           
           isend = true;
         } // if
         else {
-          if ( e.GetErrorCode().matches( "EOL" ) ) {
+          if ( e.GetSystemCode().matches( "EC" ) )
+            System.out.println( "environment cleaned" );
+          else if ( e.GetSystemCode().matches( "DEFINE" ) )
+            System.out.println( e.GetAtom() + " defined" );
+          else if ( e.GetSystemCode().matches( "EOL" ) )
             System.out.println( "ERROR (no closing quote) : END-OF-LINE encountered at Line " + 
                                 e.GetLine() + " Column " + e.GetColumn() );
-          } // if
-          else if ( e.GetErrorCode().matches( "UTL" ) ) {
+          else if ( e.GetSystemCode().matches( "UTL" ) )
             System.out.println( "ERROR (unexpected token) : atom or '(' expected when token at Line " +
                                 e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
-          } // else if
-          else if ( e.GetErrorCode().matches( "UTR" ) ) {
+          else if ( e.GetSystemCode().matches( "UTR" ) )
             System.out.println( "ERROR (unexpected token) : ')' expected when token at Line " +
                                 e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
-          } // else if
-          else if ( e.GetErrorCode().matches( "US" ) ) {
+          else if ( e.GetSystemCode().matches( "US" ) )
             System.out.println( "ERROR (unbound symbol) : " + e.GetAtom() );
-          } // if
+          else if ( e.GetSystemCode().matches( "AtANF" ) )
+            System.out.println( "ERROR (attempt to apply non-function) : " + e.GetAtom() );
           getter.Clear();
           getter.SetLine( 0 );
           tokens.clear();
         } // else
       } // catch
-      //catch ( SystemMessageException e ) {
-        //System.out.println( e.GetSystemMessage() );
-      //} // catch
     } // while
     
     System.out.println( "\nThanks for using OurScheme!" );

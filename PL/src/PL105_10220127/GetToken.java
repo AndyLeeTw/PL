@@ -15,7 +15,7 @@ public class GetToken {
     this.mscan = scan;
   } // GetToken()
   
-  public Token CutToken() throws ErrorMessageException {
+  public Token CutToken() throws SystemMessageException {
     Token aToken = null;
     if ( this.maLine.startsWith( ";" ) || this.maLine.length() == 0 ) {
       if ( this.mscan.hasNextLine() ) {
@@ -24,7 +24,7 @@ public class GetToken {
         this.mline++;
       } // if
       else
-        throw new ErrorMessageException( "EOF" );
+        throw new SystemMessageException( "EOF" );
     } // if
     
     if ( this.maLine.startsWith( " " ) ) {
@@ -42,26 +42,22 @@ public class GetToken {
       this.maLine = this.maLine.substring( 1 );
     } // if
     else if ( this.maLine.startsWith( "\"" ) ) {
-      int fromindex;
-      if ( this.maLine.contains( "\\\"" ) &&
-           this.maLine.indexOf( "\"", 1 ) > this.maLine.indexOf( "\\\"" ) ) {
-        fromindex = this.maLine.indexOf( "\\\"" ) + 2;
-      } // if
-      else
-        fromindex = 1;
-      if ( this.maLine.indexOf( "\"", fromindex )  == -1 ) {
-        throw new ErrorMessageException( "EOL", this.mline, this.mcolumn + this.maLine.length() + 1 );
-      } // if
-      else {
-        String realToken = this.maLine.substring( 0, this.maLine.indexOf( "\"", fromindex ) + 1 );
-        this.mcolumn += realToken.length();
-        realToken = realToken.replaceAll( "(?!')\\\\n(?!')", "\n" );
-        realToken = realToken.replaceAll( "(?!')\\\\t(?!')", "\t" );
-        realToken = realToken.replaceAll( "\\\\\"", "\"" );
-        realToken = realToken.replaceAll( "\\\\\\\\", "\\\\" );
-        aToken =  new Token( realToken, this.mline, this.mcolumn );
-        this.maLine = this.maLine.substring( this.maLine.indexOf( "\"", fromindex ) + 1 );
-      } // else
+      int toIndex = 0;
+      for ( int i = 1 ; i < this.maLine.length() ; i++ )
+        if ( this.maLine.substring( i ).startsWith( "\\\"" ) )
+          i++;
+        else if ( this.maLine.substring( i ).startsWith( "\"" ) && toIndex == 0 )
+          toIndex = i;
+      String realToken = this.maLine.substring( 0, toIndex + 1 );
+      if ( toIndex == 0 )
+        throw new SystemMessageException( "EOL", this.mline, this.mcolumn + this.maLine.length() + 1 );
+      this.mcolumn += realToken.length();
+      realToken = realToken.replaceAll( "(?!')\\\\n(?!')", "\n" );
+      realToken = realToken.replaceAll( "(?!')\\\\t(?!')", "\t" );
+      realToken = realToken.replaceAll( "\\\\\"", "\"" );
+      realToken = realToken.replaceAll( "\\\\\\\\", "\\\\" );
+      aToken =  new Token( realToken, this.mline, this.mcolumn );
+      this.maLine = this.maLine.substring( toIndex + 1 );
     } // else if
     else {
       int tokenToIndex = Integer.MAX_VALUE;

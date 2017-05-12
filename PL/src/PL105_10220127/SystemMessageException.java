@@ -1,16 +1,46 @@
 package PL105_10220127;
 
 public class SystemMessageException extends Exception {
-  private String SystemMessage;
-  public SystemMessageException( String SystemMessage ) {
-    this.SetSystemMessage( SystemMessage );
+  private String mSystemCode;
+  private String mAtom;
+  private int mLine;
+  private int mColumn;
+  
+  public SystemMessageException( String systemCode ) {
+    this.mSystemCode = systemCode;
   } // SystemMessageException()
   
-  public String GetSystemMessage() {
-    return this.SystemMessage;
-  } // GetSystemMessage()
+  public SystemMessageException( String systemCode, String unboundSymbol ) {
+    this.mAtom = unboundSymbol;
+    this.mSystemCode = systemCode;
+  } // SystemMessageException()
   
-  public void SetSystemMessage( String SystemMessage ) {
-    this.SystemMessage = SystemMessage;
-  } // SetSystemMessage()
-}
+  public SystemMessageException( String systemCode, int Line, int Column ) {
+    this.mSystemCode = systemCode;
+    this.mLine = Line;
+    this.mColumn = Column;
+  } // SystemMessageException()
+  
+  public SystemMessageException( String systemCode, String atom, int Line, int Column ) {
+    this.mSystemCode = systemCode;
+    this.mAtom = atom;
+    this.mLine = Line;
+    this.mColumn = Column;
+  } // SystemMessageException()
+  
+  public String GetSystemCode() {
+    return this.mSystemCode;
+  } // GetSystemCode()
+  
+  public int GetLine() {
+    return this.mLine;
+  } // GetLine()
+  
+  public int GetColumn() {
+    return this.mColumn;
+  } // GetColumn()
+
+  public String GetAtom() {
+    return mAtom;
+  } // GetAtom()
+} // class ErrorMessageException

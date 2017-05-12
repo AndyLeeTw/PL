@@ -7,15 +7,16 @@ public class AtomNode extends ConsNode {
   
   public AtomNode( int line, int column ) {
     super( true );
-    matom = new Token( "nil", line, column );
-    SetNil( true );
+    this.SetAtom( new Token( "nil", line, column ) );
+    this.mDataType = DataType.NIL;
+    this.SetNil( true );
   } // AtomNode()
     
   public AtomNode( Token atomT, int datatype ) {
     // TODO Auto-generated constructor stub
     super( true );
     this.mDataType = datatype;
-    SetAtom( atomT );
+    this.SetAtom( atomT );
   } // AtomNode()
     
   public void SetNil( boolean NilT ) {
