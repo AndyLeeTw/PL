@@ -15,6 +15,7 @@ public class TreeBuilder {
   private static final int LESSEQUAL = 4;
   private ConsNode mTransTyper;
   private LinkedHashMap<String, ConsNode>mSymbolTable = new LinkedHashMap<String, ConsNode>();
+  
   public TreeBuilder() { }
   
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
@@ -198,7 +199,18 @@ public class TreeBuilder {
           return this.Compare( sexp, MOREEQUAL );
         else if ( function.GetAtom().GetData().matches( "<=" ) )
           return this.Compare( sexp, LESSEQUAL );
-          
+        else if ( function.GetAtom().GetData().matches( "string>[?]" ) )
+          return this.CompareString( sexp, MORE );
+        else if ( function.GetAtom().GetData().matches( "string<[?]" ) )
+          return this.CompareString( sexp, LESS );
+        else if ( function.GetAtom().GetData().matches( "string=[?]" ) )
+          return this.CompareString( sexp, EQUAL );
+        else if ( function.GetAtom().GetData().matches( "string-append" ) )
+          return this.ComcatString( sexp );
+        else if ( function.GetAtom().GetData().matches( "eqv[?]" ) )
+          return this.CompareVeecor( sexp );
+        else if ( function.GetAtom().GetData().matches( "equal[?]" ) )
+          return this.Equal( sexp );
       } // else if
       else if ( function.GetDataType() == DataType.QUOTE )
         return sexp.GetLeft();
@@ -249,7 +261,7 @@ public class TreeBuilder {
                   if ( isIntDivide ) {
                     Float integer = new Float( count );
                     count = integer.intValue();
-                  } //  if
+                  } // if
                 } // if
               } // else if
             } // if
@@ -272,7 +284,7 @@ public class TreeBuilder {
   private ConsNode Compare( ConsNode sexp, int operator ) throws SystemMessageException {
     float comparer = 0;
     float compared = 0;
-    boolean inOrder = false; 
+    boolean inOrder = true; 
     if ( sexp.GetLeft().IsAtomNode() ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
       int parameterDataType = parameter.GetDataType();
@@ -287,31 +299,32 @@ public class TreeBuilder {
             parameterDataType = parameter.GetDataType();
             if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
               compared = Float.parseFloat(  parameter.GetAtom().GetData() );
-              if ( operator == MORE )
-                if ( comparer > compared )
-                  inOrder = true;
-                else
-                  inOrder = false;
-              else if ( operator == LESS )
-                if ( comparer < compared )
-                  inOrder = true;
-                else
-                  inOrder = false;
-              else if ( operator == EQUAL )
-                if ( comparer == compared )
-                  inOrder = true;
-                else
-                  inOrder = false;
-              else if ( operator == MOREEQUAL )
-                if ( comparer >= compared )
-                  inOrder = true;
-                else
-                  inOrder = false;
-              else if ( operator == LESSEQUAL )
-                if ( comparer <= compared )
-                  inOrder = true;
-                else
-                  inOrder = false;
+              if ( inOrder )
+                if ( operator == MORE )
+                  if ( comparer > compared )
+                    inOrder = true;
+                  else
+                    inOrder = false;
+                else if ( operator == LESS )
+                  if ( comparer < compared )
+                    inOrder = true;
+                  else
+                    inOrder = false;
+                else if ( operator == EQUAL )
+                  if ( comparer == compared )
+                    inOrder = true;
+                  else
+                    inOrder = false;
+                else if ( operator == MOREEQUAL )
+                  if ( comparer >= compared )
+                    inOrder = true;
+                  else
+                    inOrder = false;
+                else if ( operator == LESSEQUAL )
+                  if ( comparer <= compared )
+                    inOrder = true;
+                  else
+                    inOrder = false;
               comparer = compared;
             } // if
           } // if
@@ -334,6 +347,123 @@ public class TreeBuilder {
       return false;
   } // IsIntDivide()
   
+  private ConsNode CompareString( ConsNode sexp, int operator ) throws SystemMessageException {
+    String compareString;
+    String nextString;
+    boolean inOrder = true; 
+    if ( sexp.GetLeft().IsAtomNode() ) {
+      AtomNode parameter = ( AtomNode ) sexp.GetLeft();
+      int parameterDataType = parameter.GetDataType();
+      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+      if ( parameterDataType == DataType.STRING ) {
+        compareString = parameter.GetAtom().GetData();
+        sexp = sexp.GetRight();
+        while ( !sexp.IsAtomNode() ) {
+          if ( sexp.GetLeft().IsAtomNode() ) {
+            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+            parameter = ( AtomNode ) sexp.GetLeft();
+            parameterDataType = parameter.GetDataType();
+            if ( parameterDataType == DataType.STRING ) {
+              nextString = parameter.GetAtom().GetData();
+              if ( inOrder )
+                if ( operator == MORE )
+                  if ( compareString.compareTo( nextString ) > 0 )
+                    inOrder = true;
+                  else
+                    inOrder = false;
+                else if ( operator == LESS )
+                  if ( compareString.compareTo( nextString ) < 0 )
+                    inOrder = true;
+                  else
+                    inOrder = false;
+                else if ( operator == EQUAL )
+                  if ( compareString.compareTo( nextString ) == 0 )
+                    inOrder = true;
+                  else
+                    inOrder = false;
+              compareString = nextString;
+            } // if
+          } // if
+          
+          sexp = sexp.GetRight();              
+        } // while
+      } // if
+    } // if
+    
+    if ( inOrder )
+      return this.T();
+    else
+      return this.NIL();
+  } // CompareString()
+  
+  private AtomNode CompareVeecor( ConsNode sexp ) throws SystemMessageException {
+    ConsNode leftParameter, rightParameter;
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    leftParameter = sexp.GetLeft();
+    if ( !sexp.GetRight().IsAtomNode() ) {
+      sexp = sexp.GetRight();
+      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+      rightParameter = sexp.GetLeft();
+      if ( leftParameter.IsAtomNode() && rightParameter.IsAtomNode() ) {
+        AtomNode left = ( AtomNode ) leftParameter;
+        AtomNode right = ( AtomNode ) rightParameter;
+        if ( left.GetDataType() == DataType.STRING && right.GetDataType() == DataType.STRING )
+          if ( leftParameter == rightParameter )
+            return this.T();
+          else
+            return this.NIL();
+        else if ( left.GetDataType() != DataType.STRING && right.GetDataType() != DataType.STRING )
+          if ( left.GetAtom().GetData().compareTo( right.GetAtom().GetData() ) == 0 )
+            return this.T();
+          else
+            return this.NIL();
+        else
+          return this.NIL();
+      } // if
+      else if ( leftParameter == rightParameter )
+        return this.T();
+      else
+        return this.NIL();
+    } // if
+    
+    return null;
+  } // CompareVeecor()
+  
+  private AtomNode Equal( ConsNode sexp ) throws SystemMessageException {
+    ConsNode leftParameter, rightParameter;
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    leftParameter = sexp.GetLeft();
+    if ( !sexp.GetRight().IsAtomNode() ) {
+      sexp = sexp.GetRight();
+      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+      rightParameter = sexp.GetLeft();
+      return this.TreeCompare( leftParameter, rightParameter );
+    } // if
+    
+    return null;
+  } // Equal()
+  
+  private AtomNode TreeCompare( ConsNode treeA, ConsNode treeB ) {
+    if ( treeA.IsAtomNode() && treeB.IsAtomNode() ) {
+      AtomNode a = ( AtomNode ) treeA;
+      AtomNode b = ( AtomNode ) treeB;
+      if ( a.GetAtom().GetData().compareTo( b.GetAtom().GetData() ) == 0 )
+        return this.T();
+      else
+        return this.NIL();
+    } // if
+    else if ( !treeA.IsAtomNode() && !treeB.IsAtomNode() ) {
+      AtomNode leftResult, rightResult;
+      leftResult = this.TreeCompare( treeA.GetLeft(), treeB.GetLeft() );
+      rightResult = this.TreeCompare( treeA.GetRight(), treeB.GetRight() );
+      if ( leftResult.IsNil() || rightResult.IsNil() )
+        return this.NIL();
+      else
+        return this.T();
+    } // else if
+    else
+      return this.NIL();
+  } // TreeCompare()
 
   private AtomNode DecideValueType( float count ) {
     Float intValue = new Float( count );
@@ -343,6 +473,28 @@ public class TreeBuilder {
       return new AtomNode( new Token( String.format( "%.3f", count ), 0, 0 ), DataType.FLOAT );
   } // DecideValueType()
   
+  private ConsNode ComcatString( ConsNode sexp ) throws SystemMessageException {
+    String allString = "\"";
+    String comcatingString;
+    AtomNode parameter;
+    int parameterDataType;
+    while ( !sexp.IsAtomNode() ) {
+      if ( sexp.GetLeft().IsAtomNode() ) {
+        parameter = ( AtomNode ) sexp.GetLeft();
+        parameterDataType = parameter.GetDataType();
+        sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+        if ( parameterDataType == DataType.STRING ) {
+          comcatingString = parameter.GetAtom().GetData();
+          allString += comcatingString.substring( 1, comcatingString.length() - 1 );
+        } // if
+      } // if
+      
+      sexp = sexp.GetRight();
+    } // while
+    
+    return new AtomNode( new Token( allString + "\"", 0, 0 ), DataType.STRING );
+  } // ComcatString()
+
   private ConsNode DecideTorNil( ConsNode parameter, int dataType ) throws SystemMessageException {
     parameter = this.Eval( parameter, false );
     if ( parameter.IsAtomNode() )
@@ -353,7 +505,7 @@ public class TreeBuilder {
     else
       return this.NIL();
   } // DecideTorNil()
-  
+   
   private ConsNode DecideTorNil( ConsNode sexp, int dataType1, int dataType2 )
   throws SystemMessageException {
     if ( ! ( ( AtomNode ) this.DecideTorNil( sexp, dataType1 ) ).IsNil() ||
