@@ -4,6 +4,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 public class TreeBuilder {
+  private static final int PLUS = 0;
+  private static final int SUBTRACT = 1;
+  private static final int MULTIPLY = 2;
+  private static final int DIVIDE = 3;
+  private static final int MORE = 0;
+  private static final int LESS = 1;
+  private static final int EQUAL = 2;
+  private static final int MOREEQUAL = 3;
+  private static final int LESSEQUAL = 4;
   private ConsNode mTransTyper;
   private LinkedHashMap<String, ConsNode>mSymbolTable = new LinkedHashMap<String, ConsNode>();
   public TreeBuilder() { }
@@ -141,10 +150,11 @@ public class TreeBuilder {
         else if ( function.GetAtom().GetData().matches( "cdr" ) )
           return this.Eval( sexp.GetLeft(), false ).GetRight();
         else if ( function.GetAtom().GetData().matches( "pair[?]" ) ) {
-          if ( sexp.GetLeft().IsAtomNode() )
-            return new AtomNode( 0, 0 );
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          if ( !sexp.GetLeft().IsAtomNode() )
+            return this.T();
           else
-            return new AtomNode( new Token( "#t", 0, 0 ), DataType.T );
+            return this.NIL();
         } // else if
         else if ( function.GetAtom().GetData().matches( "null[?]" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.NIL );
@@ -166,44 +176,29 @@ public class TreeBuilder {
               return this.T();
             else
               return this.NIL();
-          }
+          } // if
           else
-            return new AtomNode( 0, 0 );
+            return this.NIL();
         } // else if
         else if ( function.GetAtom().GetData().matches( "[+]" ) )
-          return this.Plus( sexp, true );
+          return this.Arithmetic( sexp, PLUS );
         else if ( function.GetAtom().GetData().matches( "[-]" ) )
-          return this.Plus( sexp, false );
-        else if ( function.GetAtom().GetData().matches( "[*]" ) ) {
-          ConsNode sexpNow = sexp;
-          float count;
-          if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
-                                                 DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T ) {
-            count = Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
-            while ( !sexpNow.GetRight().IsAtomNode() ) {
-              sexpNow = sexpNow.GetRight();
-              if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
-                                                     DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T )
-                count *= Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
-            } // if
-            return this.DecideValueType( count );
-          } // else if
-        } // else if
-        else if ( function.GetAtom().GetData().matches( "[/]" ) ) {
-          ConsNode sexpNow = sexp;
-          float count;
-          if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
-                                                 DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T ) {
-            count = Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
-            while ( !sexpNow.GetRight().IsAtomNode() ) {
-              sexpNow = sexpNow.GetRight();
-              if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
-                                                     DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T )
-                count /= Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
-            } // if
-            return this.DecideValueType( count );
-          } // else if
-        } // else if
+          return this.Arithmetic( sexp, SUBTRACT );
+        else if ( function.GetAtom().GetData().matches( "[*]" ) )
+          return this.Arithmetic( sexp, MULTIPLY );
+        else if ( function.GetAtom().GetData().matches( "[/]" ) )
+          return this.Arithmetic( sexp, DIVIDE );
+        else if ( function.GetAtom().GetData().matches( ">" ) )
+          return this.Compare( sexp, MORE );
+        else if ( function.GetAtom().GetData().matches( "<" ) )
+          return this.Compare( sexp, LESS );
+        else if ( function.GetAtom().GetData().matches( "=" ) )
+          return this.Compare( sexp, EQUAL );
+        else if ( function.GetAtom().GetData().matches( ">=" ) )
+          return this.Compare( sexp, MOREEQUAL );
+        else if ( function.GetAtom().GetData().matches( "<=" ) )
+          return this.Compare( sexp, LESSEQUAL );
+          
       } // else if
       else if ( function.GetDataType() == DataType.QUOTE )
         return sexp.GetLeft();
@@ -219,46 +214,144 @@ public class TreeBuilder {
   } // T()
   
   private AtomNode NIL() {
-    return new AtomNode( 0, 0);
+    return new AtomNode( 0, 0 );
   } // NIL()
 
-  private ConsNode Plus( ConsNode sexp, boolean isPlus ) throws SystemMessageException {
-    ConsNode sexpNow = sexp;
+  private ConsNode Arithmetic( ConsNode sexp, int operator ) throws SystemMessageException {
     float count = 0;
-    if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
-                                           DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T ) {
-      count += Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
-      while ( !sexpNow.GetRight().IsAtomNode() ) {
-        sexpNow = sexpNow.GetRight();
-        if ( ( ( AtomNode ) this.DecideTorNil( sexpNow.GetLeft(),
-                                               DataType.INT, DataType.FLOAT ) ).GetDataType() == DataType.T )
-          if ( isPlus )
-            count += Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
-          else
-            count -= Float.parseFloat( ( ( AtomNode ) sexpNow.GetLeft() ).GetAtom().GetData() );
-      }
-    }
-    return this.DecideValueType( count );
-  }
+    boolean isIntDivide = false;
+    if ( sexp.GetLeft().IsAtomNode() ) {
+      AtomNode parameter = ( AtomNode ) sexp.GetLeft();
+      int parameterDataType = parameter.GetDataType();
+      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+      if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+        if ( operator == DIVIDE )
+          isIntDivide = this.IsIntDivide( parameterDataType );
+        count = Float.parseFloat(  parameter.GetAtom().GetData() );
+        sexp = sexp.GetRight();
+        while ( !sexp.IsAtomNode() ) {
+          if ( sexp.GetLeft().IsAtomNode() ) {
+            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+            parameter = ( AtomNode ) sexp.GetLeft();
+            parameterDataType = parameter.GetDataType();
+            if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+              if ( operator == PLUS )
+                count += Float.parseFloat(  parameter.GetAtom().GetData() );
+              else if ( operator == SUBTRACT )
+                count -= Float.parseFloat(  parameter.GetAtom().GetData() );
+              else if ( operator == MULTIPLY )
+                count *= Float.parseFloat(  parameter.GetAtom().GetData() );
+              else if ( operator == DIVIDE ) {
+                if ( isIntDivide ) // if one parameter is float, the divide is float divide
+                  isIntDivide = this.IsIntDivide( parameterDataType );
+                if ( Float.parseFloat(  parameter.GetAtom().GetData() ) != 0 ) {
+                  count /= Float.parseFloat(  parameter.GetAtom().GetData() );
+                  if ( isIntDivide ) {
+                    Float integer = new Float( count );
+                    count = integer.intValue();
+                  } //  if
+                } // if
+              } // else if
+            } // if
+          } // if
+          
+          sexp = sexp.GetRight();
+        } // while
+      } // if
+    } // if
+    
+    if ( operator == DIVIDE )
+      if ( isIntDivide )
+        return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );
+      else
+        return new AtomNode( new Token( String.format( "%.3f", count ), 0, 0 ), DataType.FLOAT );
+    else
+      return this.DecideValueType( count );
+  } // Arithmetic()
   
+  private ConsNode Compare( ConsNode sexp, int operator ) throws SystemMessageException {
+    float comparer = 0;
+    float compared = 0;
+    boolean inOrder = false; 
+    if ( sexp.GetLeft().IsAtomNode() ) {
+      AtomNode parameter = ( AtomNode ) sexp.GetLeft();
+      int parameterDataType = parameter.GetDataType();
+      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+      if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+        comparer = Float.parseFloat(  parameter.GetAtom().GetData() );
+        sexp = sexp.GetRight();
+        while ( !sexp.IsAtomNode() ) {
+          if ( sexp.GetLeft().IsAtomNode() ) {
+            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+            parameter = ( AtomNode ) sexp.GetLeft();
+            parameterDataType = parameter.GetDataType();
+            if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+              compared = Float.parseFloat(  parameter.GetAtom().GetData() );
+              if ( operator == MORE )
+                if ( comparer > compared )
+                  inOrder = true;
+                else
+                  inOrder = false;
+              else if ( operator == LESS )
+                if ( comparer < compared )
+                  inOrder = true;
+                else
+                  inOrder = false;
+              else if ( operator == EQUAL )
+                if ( comparer == compared )
+                  inOrder = true;
+                else
+                  inOrder = false;
+              else if ( operator == MOREEQUAL )
+                if ( comparer >= compared )
+                  inOrder = true;
+                else
+                  inOrder = false;
+              else if ( operator == LESSEQUAL )
+                if ( comparer <= compared )
+                  inOrder = true;
+                else
+                  inOrder = false;
+              comparer = compared;
+            } // if
+          } // if
+          
+          sexp = sexp.GetRight();              
+        } // while
+      } // if
+    } // if
+    
+    if ( inOrder )
+      return this.T();
+    else
+      return this.NIL();
+  } // Compare()
+  
+  private boolean IsIntDivide( int parameterDataType ) {
+    if ( parameterDataType == DataType.INT )
+      return true;
+    else
+      return false;
+  } // IsIntDivide()
+  
+
   private AtomNode DecideValueType( float count ) {
     Float intValue = new Float( count );
     if ( intValue.intValue() == count )
-      return new AtomNode( new Token( String.format( "%.0f", count ), 0 , 0 ), DataType.INT );
+      return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );
     else
-      return new AtomNode( new Token( String.format( "%.3f", count ), 0 , 0 ), DataType.FLOAT );
-  }
+      return new AtomNode( new Token( String.format( "%.3f", count ), 0, 0 ), DataType.FLOAT );
+  } // DecideValueType()
   
-  private ConsNode DecideTorNil( ConsNode sexp, int dataType ) throws SystemMessageException {
-    sexp = this.Eval( sexp, false );
-    if ( sexp.IsAtomNode() )
-      if ( ( ( AtomNode ) sexp ).GetDataType() == dataType )
+  private ConsNode DecideTorNil( ConsNode parameter, int dataType ) throws SystemMessageException {
+    parameter = this.Eval( parameter, false );
+    if ( parameter.IsAtomNode() )
+      if ( ( ( AtomNode ) parameter ).GetDataType() == dataType )
         return this.T();
       else
         return this.NIL();
-    else {
-      return null;
-    }
+    else
+      return this.NIL();
   } // DecideTorNil()
   
   private ConsNode DecideTorNil( ConsNode sexp, int dataType1, int dataType2 )
