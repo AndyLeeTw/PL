@@ -215,6 +215,48 @@ public class TreeBuilder {
           return this.DoIf( sexp, false );
         else if ( function.GetAtom().GetData().matches( "cond" ) )
           return this.DoCond( sexp );
+        else if ( function.GetAtom().GetData().matches( "begin" ) ) {
+          ConsNode max = null;
+          ConsNode parameter;
+          do {
+            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+            parameter = sexp.GetLeft();
+            if ( max == null )
+              max = parameter;
+            else if ( max.IsAtomNode() && parameter.IsAtomNode() ) {
+              if ( this.IsReal( ( AtomNode ) max ) && this.IsReal( ( AtomNode ) parameter ) ) {
+                String smax = ( ( AtomNode ) max ).GetAtom().GetData();
+                String sparameter = ( ( AtomNode ) parameter ).GetAtom().GetData();
+                Float maxValue = Float.parseFloat( smax );
+                Float parameterValue = Float.parseFloat( sparameter );
+                if ( maxValue < parameterValue )
+                  max = parameter;
+              } // if
+              else
+                max = parameter;
+            } // else if
+            else if ( max.IsAtomNode() && !parameter.IsAtomNode() )
+              max = parameter;
+            sexp = sexp.GetRight();  
+          } while ( !sexp.IsAtomNode() );
+          return max;
+        } // else if
+        else if ( function.GetAtom().GetData().matches( "and" ) ) {
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          ConsNode parameter = sexp.GetLeft();
+          if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL )
+            return parameter;
+          else
+            return this.Eval( sexp.GetRight().GetLeft(), false );
+        } // else if
+        else if ( function.GetAtom().GetData().matches( "or" ) ) {
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          ConsNode parameter = sexp.GetLeft();
+          if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() != DataType.NIL )
+            return parameter;
+          else
+            return this.Eval( sexp.GetRight().GetLeft(), false );
+        } // else if
       } // else if
       else if ( function.GetDataType() == DataType.QUOTE )
         return sexp.GetLeft();
@@ -233,21 +275,29 @@ public class TreeBuilder {
     return new AtomNode( 0, 0 );
   } // NIL()
 
+  private boolean IsReal( ConsNode atom ) {
+    if ( ( ( AtomNode ) atom ).GetDataType() == DataType.INT ||
+         ( ( AtomNode ) atom ).GetDataType() == DataType.FLOAT )
+      return true;
+    else
+      return false;
+  } // IsReal()
+  
   private ConsNode Arithmetic( ConsNode sexp, int operator ) throws SystemMessageException {
     float count = 0;
     boolean isIntDivide = false;
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
     if ( sexp.GetLeft().IsAtomNode() ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
       int parameterDataType = parameter.GetDataType();
-      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
       if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
         if ( operator == DIVIDE )
           isIntDivide = this.IsIntDivide( parameterDataType );
         count = Float.parseFloat(  parameter.GetAtom().GetData() );
         sexp = sexp.GetRight();
         while ( !sexp.IsAtomNode() ) {
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( sexp.GetLeft().IsAtomNode() ) {
-            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
             parameter = ( AtomNode ) sexp.GetLeft();
             parameterDataType = parameter.GetDataType();
             if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
@@ -289,16 +339,16 @@ public class TreeBuilder {
     float comparer = 0;
     float compared = 0;
     boolean inOrder = true; 
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
     if ( sexp.GetLeft().IsAtomNode() ) {
-      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
       int parameterDataType = parameter.GetDataType();
       if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
         comparer = Float.parseFloat(  parameter.GetAtom().GetData() );
         sexp = sexp.GetRight();
         while ( !sexp.IsAtomNode() ) {
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( sexp.GetLeft().IsAtomNode() ) {
-            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
             parameter = ( AtomNode ) sexp.GetLeft();
             parameterDataType = parameter.GetDataType();
             if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
@@ -355,16 +405,16 @@ public class TreeBuilder {
     String compareString;
     String nextString;
     boolean inOrder = true; 
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
     if ( sexp.GetLeft().IsAtomNode() ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
       int parameterDataType = parameter.GetDataType();
-      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
       if ( parameterDataType == DataType.STRING ) {
         compareString = parameter.GetAtom().GetData();
         sexp = sexp.GetRight();
         while ( !sexp.IsAtomNode() ) {
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( sexp.GetLeft().IsAtomNode() ) {
-            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
             parameter = ( AtomNode ) sexp.GetLeft();
             parameterDataType = parameter.GetDataType();
             if ( parameterDataType == DataType.STRING ) {
@@ -541,8 +591,14 @@ public class TreeBuilder {
   private ConsNode DoIf( ConsNode sexp, boolean isCond ) throws SystemMessageException {
     ConsNode condition;
     sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-    condition = sexp.GetLeft().GetLeft();
-    return this.MakeDecision( condition, sexp.GetRight().GetLeft(),
+    condition = sexp.GetLeft();
+    if ( isCond ) {
+      while ( !sexp.GetRight().IsAtomNode() )
+        sexp = sexp.GetRight();
+      return this.MakeDecision( condition, sexp.GetLeft(), DataType.NULL, isCond );
+    } // if
+    else
+      return this.MakeDecision( condition, sexp.GetRight().GetLeft(),
                               sexp.GetRight().GetRight().GetLeft(), isCond );
   } // DoIf()
   
