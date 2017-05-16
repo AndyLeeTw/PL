@@ -8,14 +8,14 @@ public class AtomNode extends ConsNode {
   public AtomNode( int line, int column ) {
     super( true );
     this.SetAtom( new Token( "nil", line, column ) );
-    this.mDataType = DataType.NIL;
+    this.SetDataType( DataType.NIL );
     this.SetNil( true );
   } // AtomNode()
     
-  public AtomNode( Token atomT, int datatype ) {
+  public AtomNode( Token atomT, int dataType ) {
     // TODO Auto-generated constructor stub
     super( true );
-    this.mDataType = datatype;
+    this.SetDataType( dataType );
     this.SetAtom( atomT );
   } // AtomNode()
     
@@ -38,6 +38,10 @@ public class AtomNode extends ConsNode {
   public String ToString() {
     return matom.GetData();
   } // ToString()
+  
+  public void SetDataType( int dataType ) {
+    this.mDataType = dataType;
+  } // SetDataType()
   
   public int GetDataType() {
     return this.mDataType;

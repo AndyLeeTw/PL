@@ -43,4 +43,4 @@ public class SystemMessageException extends Exception {
   public String GetAtom() {
     return mAtom;
   } // GetAtom()
-} // class ErrorMessageException
+} // class SystemMessageException
