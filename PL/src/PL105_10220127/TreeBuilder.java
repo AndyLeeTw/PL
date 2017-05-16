@@ -533,10 +533,10 @@ public class TreeBuilder {
     AtomNode parameter;
     int parameterDataType;
     while ( !sexp.IsAtomNode() ) {
+      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
       if ( sexp.GetLeft().IsAtomNode() ) {
         parameter = ( AtomNode ) sexp.GetLeft();
         parameterDataType = parameter.GetDataType();
-        sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
         if ( parameterDataType == DataType.STRING ) {
           comcatingString = parameter.GetAtom().GetData();
           allString += comcatingString.substring( 1, comcatingString.length() - 1 );
