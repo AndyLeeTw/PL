@@ -16,7 +16,9 @@ public class TreeBuilder {
   private ConsNode mTransTyper;
   private LinkedHashMap<String, ConsNode>mSymbolTable = new LinkedHashMap<String, ConsNode>();
   
-  public TreeBuilder() { }
+  public TreeBuilder() {
+    this.AddPermitiveSymbol();
+  } // TreeBuilder()
   
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
   throws SystemMessageException {
@@ -120,24 +122,42 @@ public class TreeBuilder {
       } // else
     } // if
     else {
+      head.SetLeft( this.Eval( head.GetLeft(), isTop ) );
       AtomNode function = ( AtomNode ) head.GetLeft();
       ConsNode sexp = head.GetRight();
+      String functionName = function.GetAtom().GetData();
       if ( function.GetDataType() == DataType.SYMBOL ) {
-        if ( function.GetAtom().GetData().matches( "clean-environment" ) ) {
+        int argumentCount = 0;
+        for ( ConsNode nodeNow = sexp; !nodeNow.IsAtomNode() ;
+              nodeNow = nodeNow.GetRight() ) // count argument
+          argumentCount++;
+        if ( function.GetAtom().GetData().matches( "#<procedure exit>" ) )
+          throw new SystemMessageException( "EOFT" );
+        if ( function.GetAtom().GetData().matches( "#<procedure clean-environment>" ) ) {
           this.mSymbolTable.clear();
+          this.AddPermitiveSymbol();
           throw new SystemMessageException( "EC" );
         } // if
-        else if ( function.GetAtom().GetData().matches( "define" ) ) {
+        else if ( function.GetAtom().GetData().matches( "#<procedure define>" ) ) {
           String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
           this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
           throw new SystemMessageException( "DEFINE", key );
         } // else if
-        else if ( function.GetAtom().GetData().matches( "cons" ) ) {
-          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-          sexp.SetRight( this.Eval( sexp.GetRight().GetLeft(), false ) );
-          return sexp;
+        else if ( function.GetAtom().GetData().matches( "#<procedure (cons|eqv[?]|equal[?])>" ) ) {
+          if ( argumentCount != 2 )
+            throw new SystemMessageException( "INoA", this.TakeRealFunction( functionName ) );
+          
+          if ( function.GetAtom().GetData().matches( "#<procedure eqv[?]>" ) )
+            return this.CompareVeecor( sexp );
+          else if ( function.GetAtom().GetData().matches( "#<procedure equal[?]>" ) )
+            return this.Equal( sexp );
+          else {
+            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+            sexp.SetRight( this.Eval( sexp.GetRight().GetLeft(), false ) );
+            return sexp;
+          } // else
         } // else if
-        else if ( function.GetAtom().GetData().matches( "list" ) ) {
+        else if ( function.GetAtom().GetData().matches( "#<procedure list>" ) ) {
           ConsNode sexpNow = sexp;
           do {
             sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false ) );
@@ -146,30 +166,30 @@ public class TreeBuilder {
           
           return sexp;
         } // else if
-        else if ( function.GetAtom().GetData().matches( "car" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure car>" ) )
           return this.Eval( sexp.GetLeft(), false ).GetLeft();
-        else if ( function.GetAtom().GetData().matches( "cdr" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure cdr>" ) )
           return this.Eval( sexp.GetLeft(), false ).GetRight();
-        else if ( function.GetAtom().GetData().matches( "pair[?]" ) ) {
+        else if ( function.GetAtom().GetData().matches( "#<procedure pair[?]>" ) ) {
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( !sexp.GetLeft().IsAtomNode() )
             return this.T();
           else
             return this.NIL();
         } // else if
-        else if ( function.GetAtom().GetData().matches( "null[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure null[?]>" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.NIL );
-        else if ( function.GetAtom().GetData().matches( "integer[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure integer[?]>" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.INT );
-        else if ( function.GetAtom().GetData().matches( "real[?]|number[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure (real|number)[?]>" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.INT, DataType.FLOAT );
-        else if ( function.GetAtom().GetData().matches( "string[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure string[?]>" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.STRING );
-        else if ( function.GetAtom().GetData().matches( "boolean[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure boolean[?]>" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.T, DataType.NIL );
-        else if ( function.GetAtom().GetData().matches( "symbol[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure symbol[?]>" ) )
           return this.DecideTorNil( sexp.GetLeft(), DataType.SYMBOL );
-        else if ( function.GetAtom().GetData().matches( "not" ) ) {
+        else if ( function.GetAtom().GetData().matches( "#<procedure not>" ) ) {
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( sexp.GetLeft().IsAtomNode() ) {
             AtomNode parameter = ( AtomNode ) sexp.GetLeft();
@@ -181,67 +201,46 @@ public class TreeBuilder {
           else
             return this.NIL();
         } // else if
-        else if ( function.GetAtom().GetData().matches( "[+]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure [+]>" ) )
           return this.Arithmetic( sexp, PLUS );
-        else if ( function.GetAtom().GetData().matches( "[-]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure [-]>" ) )
           return this.Arithmetic( sexp, SUBTRACT );
-        else if ( function.GetAtom().GetData().matches( "[*]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure [*]>" ) )
           return this.Arithmetic( sexp, MULTIPLY );
-        else if ( function.GetAtom().GetData().matches( "[/]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure [/]>" ) )
           return this.Arithmetic( sexp, DIVIDE );
-        else if ( function.GetAtom().GetData().matches( ">" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure >>" ) )
           return this.Compare( sexp, MORE );
-        else if ( function.GetAtom().GetData().matches( "<" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure <>" ) )
           return this.Compare( sexp, LESS );
-        else if ( function.GetAtom().GetData().matches( "=" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure =>" ) )
           return this.Compare( sexp, EQUAL );
-        else if ( function.GetAtom().GetData().matches( ">=" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure >=>" ) )
           return this.Compare( sexp, MOREEQUAL );
-        else if ( function.GetAtom().GetData().matches( "<=" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure <=>" ) )
           return this.Compare( sexp, LESSEQUAL );
-        else if ( function.GetAtom().GetData().matches( "string>[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure string>[?]>" ) )
           return this.CompareString( sexp, MORE );
-        else if ( function.GetAtom().GetData().matches( "string<[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure string<[?]>" ) )
           return this.CompareString( sexp, LESS );
-        else if ( function.GetAtom().GetData().matches( "string=[?]" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure string=[?]>" ) )
           return this.CompareString( sexp, EQUAL );
-        else if ( function.GetAtom().GetData().matches( "string-append" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure string-append>" ) )
           return this.ComcatString( sexp );
-        else if ( function.GetAtom().GetData().matches( "eqv[?]" ) )
-          return this.CompareVeecor( sexp );
-        else if ( function.GetAtom().GetData().matches( "equal[?]" ) )
-          return this.Equal( sexp );
-        else if ( function.GetAtom().GetData().matches( "if" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure if>" ) )
           return this.DoIf( sexp, false );
-        else if ( function.GetAtom().GetData().matches( "cond" ) )
+        else if ( function.GetAtom().GetData().matches( "#<procedure cond>" ) )
           return this.DoCond( sexp );
-        else if ( function.GetAtom().GetData().matches( "begin" ) ) {
-          ConsNode max = null;
+        else if ( function.GetAtom().GetData().matches( "#<procedure begin>" ) ) {
           ConsNode parameter;
           do {
             sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
             parameter = sexp.GetLeft();
-            if ( max == null )
-              max = parameter;
-            else if ( max.IsAtomNode() && parameter.IsAtomNode() ) {
-              if ( this.IsReal( ( AtomNode ) max ) && this.IsReal( ( AtomNode ) parameter ) ) {
-                String smax = ( ( AtomNode ) max ).GetAtom().GetData();
-                String sparameter = ( ( AtomNode ) parameter ).GetAtom().GetData();
-                Float maxValue = Float.parseFloat( smax );
-                Float parameterValue = Float.parseFloat( sparameter );
-                if ( maxValue < parameterValue )
-                  max = parameter;
-              } // if
-              else
-                max = parameter;
-            } // else if
-            else if ( max.IsAtomNode() && !parameter.IsAtomNode() )
-              max = parameter;
             sexp = sexp.GetRight();  
           } while ( !sexp.IsAtomNode() );
-          return max;
+          return parameter;
         } // else if
-        else if ( function.GetAtom().GetData().matches( "and" ) ) {
+        else if ( function.GetAtom().GetData().matches( "#<procedure and>" ) ) {
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           ConsNode parameter = sexp.GetLeft();
           if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL )
@@ -249,7 +248,7 @@ public class TreeBuilder {
           else
             return this.Eval( sexp.GetRight().GetLeft(), false );
         } // else if
-        else if ( function.GetAtom().GetData().matches( "or" ) ) {
+        else if ( function.GetAtom().GetData().matches( "#<procedure or>" ) ) {
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           ConsNode parameter = sexp.GetLeft();
           if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() != DataType.NIL )
@@ -257,14 +256,14 @@ public class TreeBuilder {
           else
             return this.Eval( sexp.GetRight().GetLeft(), false );
         } // else if
+        else
+          throw new SystemMessageException( "AtANF", function.GetAtom().GetData() );
       } // else if
       else if ( function.GetDataType() == DataType.QUOTE )
         return sexp.GetLeft();
       else
         throw new SystemMessageException( "AtANF", function.GetAtom().GetData() );
     } // else
-    
-    return head;
   } // Eval()
   
   private AtomNode T() {
@@ -274,10 +273,29 @@ public class TreeBuilder {
   private AtomNode NIL() {
     return new AtomNode( 0, 0 );
   } // NIL()
+  
+  private void AddPermitiveSymbol() {
+    String []permitiveSymbols = { "clean-environment", "define", "cons", "list", "car", "cdr",
+        "pair?", "null?", "integer?", "real?", "number?", "string?", "not", "and", "or",
+        "boolean?", "symbol?", "+", "-", "*", "/", ">", "<", "=", ">=", "exit",
+        "<=", "string-append", "string>?", "string<?", "string=?", "eqv?",
+        "equal?", "begin", "if", "cond" };
+    ConsNode permitiveSymbol;
+    for ( int i = 0; i < permitiveSymbols.length ; i++ ) {
+      permitiveSymbol = new AtomNode( new Token( "#<procedure " + permitiveSymbols[i] + ">", 0, 0 ),
+                                                 DataType.SYMBOL );
+      this.mSymbolTable.put( permitiveSymbols[i], permitiveSymbol );
+    } // for
+  } // AddPermitiveSymbol()
+  
+  private String TakeRealFunction( String function ) {
+    function = function.replace( "#<procedure ", "" );
+    function = function.replace( ">", "" );
+    return function;
+  } // TakeRealFunction()
 
-  private boolean IsReal( ConsNode atom ) {
-    if ( ( ( AtomNode ) atom ).GetDataType() == DataType.INT ||
-         ( ( AtomNode ) atom ).GetDataType() == DataType.FLOAT )
+  private boolean IsReal( AtomNode atom ) {
+    if ( atom.GetDataType() == DataType.INT || atom.GetDataType() == DataType.FLOAT )
       return true;
     else
       return false;
@@ -289,18 +307,16 @@ public class TreeBuilder {
     sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
     if ( sexp.GetLeft().IsAtomNode() ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
-      int parameterDataType = parameter.GetDataType();
-      if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+      if ( this.IsReal( parameter ) ) {
         if ( operator == DIVIDE )
-          isIntDivide = this.IsIntDivide( parameterDataType );
+          isIntDivide = this.IsIntDivide( parameter );
         count = Float.parseFloat(  parameter.GetAtom().GetData() );
         sexp = sexp.GetRight();
         while ( !sexp.IsAtomNode() ) {
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( sexp.GetLeft().IsAtomNode() ) {
             parameter = ( AtomNode ) sexp.GetLeft();
-            parameterDataType = parameter.GetDataType();
-            if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+            if ( this.IsReal( parameter ) ) {
               if ( operator == PLUS )
                 count += Float.parseFloat(  parameter.GetAtom().GetData() );
               else if ( operator == SUBTRACT )
@@ -309,7 +325,7 @@ public class TreeBuilder {
                 count *= Float.parseFloat(  parameter.GetAtom().GetData() );
               else if ( operator == DIVIDE ) {
                 if ( isIntDivide ) // if one parameter is float, the divide is float divide
-                  isIntDivide = this.IsIntDivide( parameterDataType );
+                  isIntDivide = this.IsIntDivide( parameter );
                 if ( Float.parseFloat(  parameter.GetAtom().GetData() ) != 0 ) {
                   count /= Float.parseFloat(  parameter.GetAtom().GetData() );
                   if ( isIntDivide ) {
@@ -342,16 +358,14 @@ public class TreeBuilder {
     sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
     if ( sexp.GetLeft().IsAtomNode() ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
-      int parameterDataType = parameter.GetDataType();
-      if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+      if ( this.IsReal( parameter ) ) {
         comparer = Float.parseFloat(  parameter.GetAtom().GetData() );
         sexp = sexp.GetRight();
         while ( !sexp.IsAtomNode() ) {
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( sexp.GetLeft().IsAtomNode() ) {
             parameter = ( AtomNode ) sexp.GetLeft();
-            parameterDataType = parameter.GetDataType();
-            if ( parameterDataType == DataType.INT || parameterDataType == DataType.FLOAT ) {
+            if ( this.IsReal( parameter ) ) {
               compared = Float.parseFloat(  parameter.GetAtom().GetData() );
               if ( inOrder )
                 if ( operator == MORE )
@@ -394,8 +408,8 @@ public class TreeBuilder {
       return this.NIL();
   } // Compare()
   
-  private boolean IsIntDivide( int parameterDataType ) {
-    if ( parameterDataType == DataType.INT )
+  private boolean IsIntDivide( AtomNode atom ) {
+    if ( atom.GetDataType() == DataType.INT )
       return true;
     else
       return false;
@@ -599,7 +613,7 @@ public class TreeBuilder {
     } // if
     else
       return this.MakeDecision( condition, sexp.GetRight().GetLeft(),
-                              sexp.GetRight().GetRight().GetLeft(), isCond );
+                                sexp.GetRight().GetRight().GetLeft(), isCond );
   } // DoIf()
   
   private ConsNode DoCond( ConsNode sexp ) throws SystemMessageException {

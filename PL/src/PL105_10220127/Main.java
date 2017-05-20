@@ -23,14 +23,6 @@ public class Main {
           getter.SetLine( 0 );
         else
           getter.SetLine( 1 );
-        if ( !head.IsAtomNode() ) {
-          if ( head.GetLeft().IsAtomNode() && head.GetRight().IsAtomNode() ) {
-            AtomNode transTyperL = ( AtomNode ) head.GetLeft();
-            AtomNode transTyperR = ( AtomNode ) head.GetRight();
-            if ( transTyperL.GetAtom().GetData().matches( "exit" ) && transTyperR.IsNil() )
-              throw new SystemMessageException( "EOFT" ) ;
-          } // if
-        } // if
         
         System.out.print( "\n> " );
         tb.TreeTravel( head, 0, true, false );
@@ -63,6 +55,8 @@ public class Main {
             System.out.println( "ERROR (unbound symbol) : " + e.GetAtom() );
           else if ( e.GetSystemCode().matches( "AtANF" ) )
             System.out.println( "ERROR (attempt to apply non-function) : " + e.GetAtom() );
+          else if ( e.GetSystemCode().matches( "INoA" ) )
+            System.out.println( "ERROR (incorrect number of arguments) : " + e.GetAtom() );
           getter.Clear();
           getter.SetLine( 0 );
           tokens.clear();
