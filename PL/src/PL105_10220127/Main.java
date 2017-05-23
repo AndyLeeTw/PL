@@ -2,6 +2,7 @@ package PL105_10220127;
 
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.LinkedHashMap;
 
 public class Main {
   public static void main( String []args ) {
@@ -34,6 +35,8 @@ public class Main {
             System.out.print( "ERROR (no more input) : END-OF-FILE encountered" );
           } // if
           else if ( e.GetSystemCode().matches( "EOFT" ) ) ;
+          else if ( e.GetSystemCode().matches( "NEE" ) )
+            System.out.println( e.getStackTrace() );
           
           isend = true;
         } // if
@@ -57,6 +60,8 @@ public class Main {
             System.out.println( "ERROR (attempt to apply non-function) : " + e.GetAtom() );
           else if ( e.GetSystemCode().matches( "INoA" ) )
             System.out.println( "ERROR (incorrect number of arguments) : " + e.GetAtom() );
+          else if ( e.GetSystemCode().matches( "EL" ) )
+            System.out.println( "ERROR (level of " + e.GetAtom().toUpperCase() + ")" );
           getter.Clear();
           getter.SetLine( 0 );
           tokens.clear();

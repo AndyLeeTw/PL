@@ -131,18 +131,24 @@ public class TreeBuilder {
         for ( ConsNode nodeNow = sexp; !nodeNow.IsAtomNode() ;
               nodeNow = nodeNow.GetRight() ) // count argument
           argumentCount++;
-        if ( function.GetAtom().GetData().matches( "#<procedure exit>" ) )
+        if ( function.GetAtom().GetData().matches( "#<procedure (exit|clean-environment|define)>" ) ) {
+          if ( !isTop )
+            throw new SystemMessageException( "EL", this.TakeRealFunction( functionName ) );
+          
+          if ( function.GetAtom().GetData().matches( "#<procedure exit>" ) )
           throw new SystemMessageException( "EOFT" );
-        if ( function.GetAtom().GetData().matches( "#<procedure clean-environment>" ) ) {
-          this.mSymbolTable.clear();
-          this.AddPermitiveSymbol();
-          throw new SystemMessageException( "EC" );
+          if ( function.GetAtom().GetData().matches( "#<procedure clean-environment>" ) ) {
+            this.mSymbolTable.clear();
+            this.AddPermitiveSymbol();
+            throw new SystemMessageException( "EC" );
+          } // if
+          else if ( function.GetAtom().GetData().matches( "#<procedure define>" ) ) {
+            String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
+            this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
+            throw new SystemMessageException( "DEFINE", key );
+          } // else if
+          throw new SystemMessageException( "NEE" );
         } // if
-        else if ( function.GetAtom().GetData().matches( "#<procedure define>" ) ) {
-          String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
-          this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
-          throw new SystemMessageException( "DEFINE", key );
-        } // else if
         else if ( function.GetAtom().GetData().matches( "#<procedure (cons|eqv[?]|equal[?])>" ) ) {
           if ( argumentCount != 2 )
             throw new SystemMessageException( "INoA", this.TakeRealFunction( functionName ) );
@@ -159,10 +165,10 @@ public class TreeBuilder {
         } // else if
         else if ( function.GetAtom().GetData().matches( "#<procedure list>" ) ) {
           ConsNode sexpNow = sexp;
-          do {
+          while ( !sexpNow.IsAtomNode() ) {
             sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false ) );
             sexpNow = sexpNow.GetRight();
-          } while ( !sexpNow.IsAtomNode() );
+          } // while
           
           return sexp;
         } // else if
