@@ -135,24 +135,39 @@ public class TreeBuilder {
           if ( !isTop )
             throw new SystemMessageException( "EL", this.TakeRealFunction( functionName ) );
           
-          if ( function.GetAtom().GetData().matches( "#<procedure exit>" ) )
-          throw new SystemMessageException( "EOFT" );
-          if ( function.GetAtom().GetData().matches( "#<procedure clean-environment>" ) ) {
-            this.mSymbolTable.clear();
-            this.AddPermitiveSymbol();
-            throw new SystemMessageException( "EC" );
+          if ( function.GetAtom().GetData().matches( "#<procedure (exit|clean-environment)>" ) ) {
+            this.CheckParameterAmount( argumentCount, 0, functionName );
+            if ( function.GetAtom().GetData().matches( "#<procedure exit>" ) )
+              throw new SystemMessageException( "EOFT" );
+            else {
+              this.mSymbolTable.clear();
+              this.AddPermitiveSymbol();
+              throw new SystemMessageException( "EC" );
+            } // else
           } // if
-          else if ( function.GetAtom().GetData().matches( "#<procedure define>" ) ) {
-            String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
-            this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
-            throw new SystemMessageException( "DEFINE", key );
-          } // else if
-          throw new SystemMessageException( "NEE" );
+          else { // #<procedure define>
+            try {
+              this.CheckParameterAmount( argumentCount, 2, functionName );
+            } // try
+            catch ( SystemMessageException e ) {
+              function.GetAtom().SetData( "define" );
+              throw new SystemMessageException( head );
+            } // catch
+            
+            if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).GetDataType() ==
+                 DataType.SYMBOL ) {
+              String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
+              this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
+              throw new SystemMessageException( "DEFINE", key );
+            } // if
+            else {
+              function.GetAtom().SetData( "define" );
+              throw new SystemMessageException( head );
+            } // else
+          } // else
         } // if
         else if ( function.GetAtom().GetData().matches( "#<procedure (cons|eqv[?]|equal[?])>" ) ) {
-          if ( argumentCount != 2 )
-            throw new SystemMessageException( "INoA", this.TakeRealFunction( functionName ) );
-          
+          this.CheckParameterAmount( argumentCount, 2, functionName );        
           if ( function.GetAtom().GetData().matches( "#<procedure eqv[?]>" ) )
             return this.CompareVeecor( sexp );
           else if ( function.GetAtom().GetData().matches( "#<procedure equal[?]>" ) )
@@ -293,6 +308,12 @@ public class TreeBuilder {
       this.mSymbolTable.put( permitiveSymbols[i], permitiveSymbol );
     } // for
   } // AddPermitiveSymbol()
+  
+  private void CheckParameterAmount( int argumentCount, int argumentAmount, String functionName )
+  throws SystemMessageException {
+    if ( argumentCount != argumentAmount )
+      throw new SystemMessageException( "INoA", this.TakeRealFunction( functionName ) );
+  } // CheckParameterAmount()
   
   private String TakeRealFunction( String function ) {
     function = function.replace( "#<procedure ", "" );
