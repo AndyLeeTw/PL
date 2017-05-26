@@ -5,7 +5,6 @@ public class SystemMessageException extends Exception {
   private String mAtom;
   private int mLine;
   private int mColumn;
-  private ConsNode mDefinehead;
   
   public SystemMessageException( String systemCode ) {
     this.mSystemCode = systemCode;
@@ -29,11 +28,6 @@ public class SystemMessageException extends Exception {
     this.mColumn = Column;
   } // SystemMessageException()
   
-  public SystemMessageException( ConsNode defineHead ) {
-    this.mSystemCode = "EDF";
-    this.mDefinehead = defineHead;
-  } // SystemMessageException()
-  
   public String GetSystemCode() {
     return this.mSystemCode;
   } // GetSystemCode()
@@ -49,8 +43,4 @@ public class SystemMessageException extends Exception {
   public String GetAtom() {
     return this.mAtom;
   } // GetAtom()
-  
-  public ConsNode GetDefineHead() {
-    return this.mDefinehead;
-  }
 } // class SystemMessageException

@@ -1,5 +1,6 @@
 package PL105_10220127;
 
+import java.awt.RenderingHints.Key;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -13,6 +14,11 @@ public class TreeBuilder {
   private static final int EQUAL = 2;
   private static final int MOREEQUAL = 3;
   private static final int LESSEQUAL = 4;
+  private static final String []PERMITIVESYMBOLS = { "clean-environment", "define", "cons",
+      "list", "car", "cdr", "pair?", "null?", "integer?", "real?", "number?", "string?", "not", "and", "or",
+      "boolean?", "symbol?", "+", "-", "*", "/", ">", "<", "=", ">=", "exit",
+      "<=", "string-append", "string>?", "string<?", "string=?", "eqv?",
+      "equal?", "begin", "if", "cond" };
   private ConsNode mTransTyper;
   private LinkedHashMap<String, ConsNode>mSymbolTable = new LinkedHashMap<String, ConsNode>();
   
@@ -148,22 +154,31 @@ public class TreeBuilder {
           else { // #<procedure define>
             try {
               this.CheckParameterAmount( argumentCount, 2, functionName );
+              if ( sexp.GetLeft().IsAtomNode() ) {
+                String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
+                if ( ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == DataType.SYMBOL ) {
+                  if ( key.matches( "exit|clean-environment|define" ) )
+                    throw new SystemMessageException( "EL", this.TakeRealFunction( functionName ) );
+                  else if ( !this.IsPermitiveSymbol( key ) ) {
+                    this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
+                    throw new SystemMessageException( "DEFINE", key );
+                  } // if
+                  else
+                    throw new SystemMessageException( "EDF" );
+                } // if
+                else
+                  throw new SystemMessageException( "EDF" );
+              } // if
+              else
+                throw new SystemMessageException( "EDF" );
             } // try
             catch ( SystemMessageException e ) {
-              function.GetAtom().SetData( "define" );
-              throw new SystemMessageException( head );
+              if ( e.GetSystemCode().matches( "DEFINE|EL" ) )
+                throw e;
+              else
+                this.PrintErrorDefineFormat( function, head );
             } // catch
-            
-            if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).GetDataType() ==
-                 DataType.SYMBOL ) {
-              String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
-              this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
-              throw new SystemMessageException( "DEFINE", key );
-            } // if
-            else {
-              function.GetAtom().SetData( "define" );
-              throw new SystemMessageException( head );
-            } // else
+            return null;
           } // else
         } // if
         else if ( function.GetAtom().GetData().matches( "#<procedure (cons|eqv[?]|equal[?])>" ) ) {
@@ -296,18 +311,28 @@ public class TreeBuilder {
   } // NIL()
   
   private void AddPermitiveSymbol() {
-    String []permitiveSymbols = { "clean-environment", "define", "cons", "list", "car", "cdr",
-        "pair?", "null?", "integer?", "real?", "number?", "string?", "not", "and", "or",
-        "boolean?", "symbol?", "+", "-", "*", "/", ">", "<", "=", ">=", "exit",
-        "<=", "string-append", "string>?", "string<?", "string=?", "eqv?",
-        "equal?", "begin", "if", "cond" };
     ConsNode permitiveSymbol;
-    for ( int i = 0; i < permitiveSymbols.length ; i++ ) {
-      permitiveSymbol = new AtomNode( new Token( "#<procedure " + permitiveSymbols[i] + ">", 0, 0 ),
+    for ( int i = 0; i < TreeBuilder.PERMITIVESYMBOLS.length ; i++ ) {
+      permitiveSymbol = new AtomNode( new Token( "#<procedure " + TreeBuilder.PERMITIVESYMBOLS[i] + ">", 0, 0 ),
                                                  DataType.SYMBOL );
-      this.mSymbolTable.put( permitiveSymbols[i], permitiveSymbol );
+      this.mSymbolTable.put( TreeBuilder.PERMITIVESYMBOLS[i], permitiveSymbol );
     } // for
   } // AddPermitiveSymbol()
+  
+  private boolean IsPermitiveSymbol( String symbol ) {
+    for ( int i = 0; i < TreeBuilder.PERMITIVESYMBOLS.length ; i++ )
+      if ( symbol.compareTo( TreeBuilder.PERMITIVESYMBOLS[i] ) == 0 )
+        return true;
+    return false;
+  } // IsPermitiveSymbol()
+  
+  private void PrintErrorDefineFormat( AtomNode function, ConsNode head ) throws SystemMessageException {
+    function.GetAtom().SetData( "define" );
+    System.out.print( "ERROR (DEFINE format) : " );
+    this.TreeTravel( head, 0, true, false );
+    function.GetAtom().SetData( "#<procedure define>" );
+    throw new SystemMessageException( "EDF" );
+  } // PrintErrorDefineFormat()
   
   private void CheckParameterAmount( int argumentCount, int argumentAmount, String functionName )
   throws SystemMessageException {

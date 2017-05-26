@@ -62,10 +62,7 @@ public class Main {
             System.out.println( "ERROR (incorrect number of arguments) : " + e.GetAtom() );
           else if ( e.GetSystemCode().matches( "EL" ) )
             System.out.println( "ERROR (level of " + e.GetAtom().toUpperCase() + ")" );
-          else if ( e.GetSystemCode().matches( "EDF" ) ) {
-            System.out.print( "ERROR (DEFINE format) : " );
-            tb.TreeTravel( e.GetDefineHead(), 0, true, false );
-          }
+          else if ( e.GetSystemCode().matches( "EDF" ) );
           getter.Clear();
           getter.SetLine( 0 );
           tokens.clear();
