@@ -5,6 +5,7 @@ public class SystemMessageException extends Exception {
   private String mAtom;
   private int mLine;
   private int mColumn;
+  private ConsNode mHead;
   
   public SystemMessageException( String systemCode ) {
     this.mSystemCode = systemCode;
@@ -28,6 +29,11 @@ public class SystemMessageException extends Exception {
     this.mColumn = Column;
   } // SystemMessageException()
   
+  public SystemMessageException( String systemCode, ConsNode head ) {
+    this.mSystemCode = systemCode;
+    this.mHead = head;
+  } // SystemMessageException()
+  
   public String GetSystemCode() {
     return this.mSystemCode;
   } // GetSystemCode()
@@ -43,4 +49,8 @@ public class SystemMessageException extends Exception {
   public String GetAtom() {
     return this.mAtom;
   } // GetAtom()
+  
+  public ConsNode GetHead() {
+    return this.mHead;
+  } // GetHead()
 } // class SystemMessageException

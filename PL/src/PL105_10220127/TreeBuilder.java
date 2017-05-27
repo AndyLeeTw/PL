@@ -1,6 +1,5 @@
 package PL105_10220127;
 
-import java.awt.RenderingHints.Key;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -134,9 +133,12 @@ public class TreeBuilder {
       String functionName = function.GetAtom().GetData();
       if ( function.GetDataType() == DataType.SYMBOL ) {
         int argumentCount = 0;
-        for ( ConsNode nodeNow = sexp; !nodeNow.IsAtomNode() ;
+        ConsNode nodeNow;
+        for ( nodeNow = sexp; !nodeNow.IsAtomNode() ;
               nodeNow = nodeNow.GetRight() ) // count argument
           argumentCount++;
+        if ( !( ( AtomNode ) nodeNow ).IsNil() )
+          throw new SystemMessageException( "NL", head );
         if ( function.GetAtom().GetData().matches( "#<procedure (exit|clean-environment|define)>" ) ) {
           if ( !isTop )
             throw new SystemMessageException( "EL", this.TakeRealFunction( functionName ) );
@@ -153,36 +155,32 @@ public class TreeBuilder {
           } // if
           else { // #<procedure define>
             try {
-              this.CheckParameterAmount( argumentCount, 2, functionName );
-              if ( sexp.GetLeft().IsAtomNode() ) {
-                String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
-                if ( ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == DataType.SYMBOL ) {
-                  if ( key.matches( "exit|clean-environment|define" ) )
-                    throw new SystemMessageException( "EL", this.TakeRealFunction( functionName ) );
-                  else if ( !this.IsPermitiveSymbol( key ) ) {
-                    this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
-                    throw new SystemMessageException( "DEFINE", key );
-                  } // if
-                  else
-                    throw new SystemMessageException( "EDF" );
-                } // if
-                else
-                  throw new SystemMessageException( "EDF" );
-              } // if
-              else
-                throw new SystemMessageException( "EDF" );
+            this.CheckParameterAmount( argumentCount, 2, functionName );
             } // try
             catch ( SystemMessageException e ) {
-              if ( e.GetSystemCode().matches( "DEFINE|EL" ) )
-                throw e;
-              else
-                this.PrintErrorDefineFormat( function, head );
+              throw new SystemMessageException( "EDF", head );
             } // catch
-            return null;
+            if ( sexp.GetLeft().IsAtomNode() ) {
+              String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
+              if ( ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == DataType.SYMBOL ) {
+                //if ( key.matches( "exit|clean-environment|define" ) )
+                //  throw new SystemMessageException( "EL", this.TakeRealFunction( functionName ) );
+                if ( !this.IsPermitiveSymbol( key ) ) {
+                  this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
+                  throw new SystemMessageException( "DEFINE", key );
+                } // if
+                else
+                  throw new SystemMessageException( "EDF", head );
+              } // if
+              else
+                throw new SystemMessageException( "EDF", head );
+            } // if
+            else
+              throw new SystemMessageException( "EDF", head );
           } // else
         } // if
         else if ( function.GetAtom().GetData().matches( "#<procedure (cons|eqv[?]|equal[?])>" ) ) {
-          this.CheckParameterAmount( argumentCount, 2, functionName );        
+          this.CheckParameterAmount( argumentCount, 2, functionName );     
           if ( function.GetAtom().GetData().matches( "#<procedure eqv[?]>" ) )
             return this.CompareVeecor( sexp );
           else if ( function.GetAtom().GetData().matches( "#<procedure equal[?]>" ) )
@@ -326,12 +324,11 @@ public class TreeBuilder {
     return false;
   } // IsPermitiveSymbol()
   
-  private void PrintErrorDefineFormat( AtomNode function, ConsNode head ) throws SystemMessageException {
-    function.GetAtom().SetData( "define" );
-    System.out.print( "ERROR (DEFINE format) : " );
+  public void PrintErrorFormat( ConsNode head ) {
+    AtomNode function = ( AtomNode ) head.GetLeft();
+    function.GetAtom().SetData( this.TakeRealFunction( function.GetAtom().GetData() ) );
     this.TreeTravel( head, 0, true, false );
-    function.GetAtom().SetData( "#<procedure define>" );
-    throw new SystemMessageException( "EDF" );
+    function.GetAtom().SetData( "#<procedure "+ function.GetAtom().GetData() + ">" );
   } // PrintErrorDefineFormat()
   
   private void CheckParameterAmount( int argumentCount, int argumentAmount, String functionName )

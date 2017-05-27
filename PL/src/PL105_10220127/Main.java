@@ -40,12 +40,8 @@ public class Main {
           
           isend = true;
         } // if
-        else {
-          if ( e.GetSystemCode().matches( "EC" ) )
-            System.out.println( "environment cleaned" );
-          else if ( e.GetSystemCode().matches( "DEFINE" ) )
-            System.out.println( e.GetAtom() + " defined" );
-          else if ( e.GetSystemCode().matches( "EOL" ) )
+        else if ( e.GetSystemCode().matches( "EOL|UT[LR]" ) ) {
+          if ( e.GetSystemCode().matches( "EOL" ) )
             System.out.println( "ERROR (no closing quote) : END-OF-LINE encountered at Line " + 
                                 e.GetLine() + " Column " + e.GetColumn() );
           else if ( e.GetSystemCode().matches( "UTL" ) )
@@ -54,6 +50,15 @@ public class Main {
           else if ( e.GetSystemCode().matches( "UTR" ) )
             System.out.println( "ERROR (unexpected token) : ')' expected when token at Line " +
                                 e.GetLine() + " Column " + e.GetColumn() + " is >>" + e.GetAtom() + "<<" );
+          tokens.clear();
+          getter.Clear();
+          getter.SetLine( 0 );
+        } // else if
+        else {
+          if ( e.GetSystemCode().matches( "EC" ) )
+            System.out.println( "environment cleaned" );
+          else if ( e.GetSystemCode().matches( "DEFINE" ) )
+            System.out.println( e.GetAtom() + " defined" );
           else if ( e.GetSystemCode().matches( "US" ) )
             System.out.println( "ERROR (unbound symbol) : " + e.GetAtom() );
           else if ( e.GetSystemCode().matches( "AtANF" ) )
@@ -62,10 +67,14 @@ public class Main {
             System.out.println( "ERROR (incorrect number of arguments) : " + e.GetAtom() );
           else if ( e.GetSystemCode().matches( "EL" ) )
             System.out.println( "ERROR (level of " + e.GetAtom().toUpperCase() + ")" );
-          else if ( e.GetSystemCode().matches( "EDF" ) );
-          getter.Clear();
-          getter.SetLine( 0 );
-          tokens.clear();
+          else if ( e.GetSystemCode().matches( "EDF" ) ) {
+            System.out.print( "ERROR (DEFINE format) : " );
+            tb.PrintErrorFormat( e.GetHead() );
+          } // else if
+          else if ( e.GetSystemCode().matches( "NL" ) ) {
+            System.out.print( "ERROR (non-list) : " );
+            tb.PrintErrorFormat( e.GetHead() );
+          } // else if
         } // else
       } // catch
     } // while
