@@ -35,8 +35,6 @@ public class Main {
             System.out.print( "ERROR (no more input) : END-OF-FILE encountered" );
           } // if
           else if ( e.GetSystemCode().matches( "EOFT" ) ) ;
-          else if ( e.GetSystemCode().matches( "NEE" ) )
-            System.out.println( e.getStackTrace() );
           
           isend = true;
         } // if
@@ -65,6 +63,12 @@ public class Main {
             System.out.println( "ERROR (attempt to apply non-function) : " + e.GetAtom() );
           else if ( e.GetSystemCode().matches( "INoA" ) )
             System.out.println( "ERROR (incorrect number of arguments) : " + e.GetAtom() );
+          else if ( e.GetSystemCode().matches( "IAT" ) ) {
+            System.out.print( "ERROR (" + e.GetAtom() + " with incorrect argument type) : " );
+            tb.TreeTravel( e.GetHead(), 0, true, false );
+          }
+          else if ( e.GetSystemCode().matches( "DbZ" ) )
+            System.out.println( "ERROR (division by zero) : /" );
           else if ( e.GetSystemCode().matches( "EL" ) )
             System.out.println( "ERROR (level of " + e.GetAtom().toUpperCase() + ")" );
           else if ( e.GetSystemCode().matches( "EDF" ) ) {

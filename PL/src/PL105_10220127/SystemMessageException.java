@@ -34,6 +34,12 @@ public class SystemMessageException extends Exception {
     this.mHead = head;
   } // SystemMessageException()
   
+  public SystemMessageException( String systemCode, String functionName, ConsNode head ) {
+    this.mSystemCode = systemCode;
+    this.mHead = head;
+    this.mAtom = functionName;
+  } // SystemMessageException()
+  
   public String GetSystemCode() {
     return this.mSystemCode;
   } // GetSystemCode()
