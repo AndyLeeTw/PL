@@ -66,7 +66,7 @@ public class Main {
           else if ( e.GetSystemCode().matches( "IAT" ) ) {
             System.out.print( "ERROR (" + e.GetAtom() + " with incorrect argument type) : " );
             tb.TreeTravel( e.GetHead(), 0, true, false );
-          }
+          } // else if
           else if ( e.GetSystemCode().matches( "DbZ" ) )
             System.out.println( "ERROR (division by zero) : /" );
           else if ( e.GetSystemCode().matches( "EL" ) )
