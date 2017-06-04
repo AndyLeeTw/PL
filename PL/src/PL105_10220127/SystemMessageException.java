@@ -29,11 +29,6 @@ public class SystemMessageException extends Exception {
     this.mColumn = Column;
   } // SystemMessageException()
   
-  public SystemMessageException( String systemCode, ConsNode head ) {
-    this.mSystemCode = systemCode;
-    this.mHead = head;
-  } // SystemMessageException()
-  
   public SystemMessageException( String systemCode, String functionName, ConsNode head ) {
     this.mSystemCode = systemCode;
     this.mHead = head;

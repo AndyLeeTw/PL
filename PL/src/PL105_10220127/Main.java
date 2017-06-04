@@ -71,12 +71,16 @@ public class Main {
             System.out.println( "ERROR (division by zero) : /" );
           else if ( e.GetSystemCode().matches( "EL" ) )
             System.out.println( "ERROR (level of " + e.GetAtom().toUpperCase() + ")" );
-          else if ( e.GetSystemCode().matches( "EDF" ) ) {
-            System.out.print( "ERROR (DEFINE format) : " );
+          else if ( e.GetSystemCode().matches( "EF" ) ) {
+            System.out.print( "ERROR (" + e.GetAtom().toUpperCase() + " format) : " );
             tb.PrintErrorFormat( e.GetHead() );
           } // else if
           else if ( e.GetSystemCode().matches( "NL" ) ) {
             System.out.print( "ERROR (non-list) : " );
+            tb.PrintErrorFormat( e.GetHead() );
+          } // else if
+          else if ( e.GetSystemCode().matches( "NRV" ) ) {
+            System.out.print( "ERROR (no return value) : " );
             tb.PrintErrorFormat( e.GetHead() );
           } // else if
         } // else
