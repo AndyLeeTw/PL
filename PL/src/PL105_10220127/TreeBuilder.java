@@ -320,15 +320,21 @@ public class TreeBuilder {
           ConsNode parameter = sexp.GetLeft();
           if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL )
             return parameter;
-          else
-            return this.Eval( sexp.GetRight().GetLeft(), false );
+          else {
+            while ( !sexp.GetRight().IsAtomNode() )
+              sexp = sexp.GetRight();
+            return this.Eval( sexp.GetLeft(), false );
+          } // else
         } // else if
         else if ( functionName.matches( "#<procedure or>" ) ) {
           this.CheckParameterAmount( argumentCount, 2, functionName, true );
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           ConsNode parameter = sexp.GetLeft();
-          if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL )
-            return this.Eval( sexp.GetRight().GetLeft(), false );
+          if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL ) {
+            while ( !sexp.GetRight().IsAtomNode() )
+              sexp = sexp.GetRight();
+            return this.Eval( sexp.GetLeft(), false );
+          } // if
           else
             return parameter;
         } // else if
@@ -346,8 +352,6 @@ public class TreeBuilder {
     return new AtomNode( new Token( "#t", 0, 0 ), DataType.T );
   } // T()
 
-  
-  
   private AtomNode NIL() {
     return new AtomNode( 0, 0 );
   } // NIL()
@@ -408,14 +412,16 @@ public class TreeBuilder {
     sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
     if ( this.IsReal( sexp.GetLeft() ) ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
-      if ( operator == DIVIDE )
-        isIntDivide = this.IsIntDivide( parameter );
+      isIntDivide = this.IsIntDivide( parameter );
       count = Float.parseFloat(  parameter.GetAtom().GetData() );
       sexp = sexp.GetRight();
       while ( !sexp.IsAtomNode() ) {
         sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
         if ( this.IsReal( sexp.GetLeft() ) ) {
           parameter = ( AtomNode ) sexp.GetLeft();
+          if ( isIntDivide ) // if one parameter is float, the divide is float divide
+            isIntDivide = this.IsIntDivide( parameter );
+          
           if ( operator == PLUS )
             count += Float.parseFloat(  parameter.GetAtom().GetData() );
           else if ( operator == SUBTRACT )
@@ -423,8 +429,6 @@ public class TreeBuilder {
           else if ( operator == MULTIPLY )
             count *= Float.parseFloat(  parameter.GetAtom().GetData() );
           else if ( operator == DIVIDE ) {
-            if ( isIntDivide ) // if one parameter is float, the divide is float divide
-              isIntDivide = this.IsIntDivide( parameter );
             if ( Float.parseFloat(  parameter.GetAtom().GetData() ) != 0 ) {
               count /= Float.parseFloat(  parameter.GetAtom().GetData() );
               if ( isIntDivide ) {
@@ -444,13 +448,10 @@ public class TreeBuilder {
     else
       throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexp.GetLeft() );
     
-    if ( operator == DIVIDE )
-      if ( isIntDivide )
-        return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );
-      else
-        return new AtomNode( new Token( String.format( "%.3f", count ), 0, 0 ), DataType.FLOAT );
+    if ( isIntDivide )
+      return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );
     else
-      return this.DecideValueType( count );
+      return new AtomNode( new Token( String.format( "%.3f", count ), 0, 0 ), DataType.FLOAT );
   } // Arithmetic()
   
   private ConsNode Compare( ConsNode sexp, int argumentCount, String functionName, int operator )
@@ -628,14 +629,6 @@ public class TreeBuilder {
     else
       return this.NIL();
   } // TreeCompare()
-  
-  private AtomNode DecideValueType( float count ) {
-    Float intValue = new Float( count );
-    if ( intValue.intValue() == count )
-      return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );
-    else
-      return new AtomNode( new Token( String.format( "%.3f", count ), 0, 0 ), DataType.FLOAT );
-  } // DecideValueType()
   
   private ConsNode ComcatString( ConsNode sexp, int argumentCount, String functionName )
   throws SystemMessageException {
