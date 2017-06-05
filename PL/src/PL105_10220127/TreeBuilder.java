@@ -201,14 +201,13 @@ public class TreeBuilder {
         else if ( functionName.matches( "#<procedure c[ad]r>" ) ) {
           this.CheckParameterAmount( argumentCount, 1, functionName, false );
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-          functionName = this.TakeRealFunction( functionName );
           if ( !sexp.GetLeft().IsAtomNode() )
-            if ( functionName.matches( "car" ) )
+            if ( functionName.matches( "#<procedure car>" ) )
               return sexp.GetLeft().GetLeft();
             else
               return sexp.GetLeft().GetRight();
           else
-            throw new SystemMessageException( "IAT", functionName, sexp.GetLeft() );
+            throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexp.GetLeft() );
         } // else if
         else if ( functionName.matches( "#<procedure (pair|list)[?]>" ) ) {
           this.CheckParameterAmount( argumentCount, 1, functionName, false );
@@ -245,13 +244,8 @@ public class TreeBuilder {
         else if ( functionName.matches( "#<procedure not>" ) ) {
           this.CheckParameterAmount( argumentCount, 1, functionName, false );
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-          if ( sexp.GetLeft().IsAtomNode() ) {
-            AtomNode parameter = ( AtomNode ) sexp.GetLeft();
-            if ( parameter.GetDataType() == DataType.NIL )
+          if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).IsNil() )
               return this.T();
-            else
-              return this.NIL();
-          } // if
           else
             return this.NIL();
         } // else if
@@ -284,8 +278,7 @@ public class TreeBuilder {
         else if ( functionName.matches( "#<procedure if>" ) ) {
           try {
             return this.DoIf( sexp, argumentCount, functionName );
-          } // try
-          catch ( SystemMessageException e ) {
+          } catch ( SystemMessageException e ) {
             if ( e.GetSystemCode().matches( "NRV" ) )
               throw new SystemMessageException( "NRV", "", head );
             else
@@ -355,7 +348,20 @@ public class TreeBuilder {
   private AtomNode NIL() {
     return new AtomNode( 0, 0 );
   } // NIL()
-
+  
+  private ConsNode Clone( ConsNode head ) {
+    ConsNode aNode;
+    if ( head.IsAtomNode() )
+      return new AtomNode( ( ( AtomNode ) head ).GetAtom(), ( ( AtomNode ) head ).GetDataType() );
+    else {
+      aNode = new ConsNode();
+      aNode.SetLeft( this.Clone( head.GetLeft() ) );
+      aNode.SetRight( this.Clone( head.GetRight() ) );
+      this.TreeTravel( aNode, 0, true, false);
+      return aNode;
+    } // else
+  } // Clone()
+  
   private void AddPermitiveSymbol() {
     ConsNode permitiveSymbol;
     for ( int i = 0; i < PERMITIVESYMBOLS.length ; i++ ) {
@@ -388,7 +394,7 @@ public class TreeBuilder {
   } // CheckParameterAmount()
   
   private String TakeRealFunction( String function ) {
-    function = function.replace( "#<procedure ", "" );
+    function = function.replaceAll( "^#<procedure ", "" );
     function = function.replaceAll( ">$", "" );
     return function;
   } // TakeRealFunction()
@@ -447,6 +453,15 @@ public class TreeBuilder {
     } // if
     else
       throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexp.GetLeft() );
+    
+    if ( operator == DIVIDE ) {
+      count *= 1000;
+      Float decimal = new Float( count );
+      count = decimal.intValue();
+      if ( decimal.floatValue() - count >= 0.5 )
+        count++;
+      count /= 1000;
+    } // if
     
     if ( isIntDivide )
       return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );
@@ -702,9 +717,9 @@ public class TreeBuilder {
     catch ( SystemMessageException e ) {
       this.CheckParameterAmount( argumentCount, 3, functionName, false );
     } // catch
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-    return this.MakeDecision( sexp.GetLeft(), sexp.GetRight().GetLeft(),
-                              sexp.GetRight().GetRight().GetLeft(), false );
+    ConsNode condition = this.Clone( sexp.GetLeft() );
+    return this.MakeDecision( this.Eval( condition, false ), 
+                              sexp.GetRight().GetLeft(), sexp.GetRight().GetRight().GetLeft(), false );
   } // DoIf()
   
   private ConsNode DoCond( ConsNode sexp, int argumentCount, String functionName )
@@ -719,23 +734,25 @@ public class TreeBuilder {
     } // catch
     if ( !sexp.GetLeft().IsAtomNode() ) {
       checkDecisionType = null;
-      while ( checkDecisionType == null && !sexp.GetRight().IsAtomNode() ) {       
-        checkDecisionType = this.ParseCond( sexp.GetLeft() );
+      while ( !sexp.GetRight().IsAtomNode() ) {       
         if ( checkDecisionType == null )
-          sexp = sexp.GetRight();
+          checkDecisionType = this.ParseCond( sexp.GetLeft() );
+        sexp = sexp.GetRight();
       } // while
       
-      if ( checkDecisionType == null )
-        if ( !sexp.GetLeft().IsAtomNode() ) {
-          if ( sexp.GetLeft().GetLeft().IsAtomNode() ) {
-            condition = ( AtomNode ) sexp.GetLeft().GetLeft();
-            if ( condition.GetAtom().GetData().matches( "else" ) && argumentCount != 0 )
-              condition.SetDataType( DataType.T );
-          } // if
-          
-          checkDecisionType = this.ParseCond( sexp.GetLeft() );
-        } // if
       
+      if ( !sexp.GetLeft().IsAtomNode() ) {
+        if ( sexp.GetLeft().GetLeft().IsAtomNode() ) {
+          condition = ( AtomNode ) sexp.GetLeft().GetLeft();
+          if ( condition.GetAtom().GetData().matches( "else" ) && argumentCount != 0 )
+            condition.SetDataType( DataType.T );
+        } // if
+        
+        if ( checkDecisionType == null )
+          checkDecisionType = this.ParseCond( sexp.GetLeft() );
+      } // if
+      else
+        throw new SystemMessageException( "EF" );
       return checkDecisionType;
     } // if
     else

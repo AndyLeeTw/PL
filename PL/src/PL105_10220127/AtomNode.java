@@ -16,27 +16,29 @@ public class AtomNode extends ConsNode {
     // TODO Auto-generated constructor stub
     super( true );
     this.SetDataType( dataType );
+    if ( dataType == DataType.NIL )
+      this.SetNil( true );
     this.SetAtom( atomT );
   } // AtomNode()
     
   public void SetNil( boolean NilT ) {
-    mNil = NilT;
+    this.mNil = NilT;
   } // SetNil()
     
   public boolean IsNil() {
-    return mNil;
+    return this.mNil;
   } // IsNil()
     
   public Token GetAtom() {
-    return matom;
+    return this.matom;
   } // GetAtom()
     
   public void SetAtom( Token atomT ) {
-    matom = new Token( atomT );
+    this.matom = new Token( atomT );
   } // SetAtom()
     
   public String ToString() {
-    return matom.GetData();
+    return this.matom.GetData();
   } // ToString()
   
   public void SetDataType( int dataType ) {
