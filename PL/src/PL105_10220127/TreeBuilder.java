@@ -245,7 +245,7 @@ public class TreeBuilder {
           this.CheckParameterAmount( argumentCount, 1, functionName, false );
           sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
           if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).IsNil() )
-              return this.T();
+            return this.T();
           else
             return this.NIL();
         } // else if
@@ -309,27 +309,27 @@ public class TreeBuilder {
         } // else if
         else if ( functionName.matches( "#<procedure and>" ) ) {
           this.CheckParameterAmount( argumentCount, 2, functionName, true );
-          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-          ConsNode parameter = sexp.GetLeft();
-          if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL )
-            return parameter;
-          else {
-            while ( !sexp.GetRight().IsAtomNode() )
-              sexp = sexp.GetRight();
-            return this.Eval( sexp.GetLeft(), false );
-          } // else
+          ConsNode parameter;
+          while ( !sexp.GetRight().IsAtomNode() ) {
+            parameter = this.Eval( sexp.GetLeft(), false );
+            if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL )
+              return parameter;
+            sexp = sexp.GetRight();
+          } // while
+          
+          return this.Eval( sexp.GetLeft(), false );
         } // else if
         else if ( functionName.matches( "#<procedure or>" ) ) {
           this.CheckParameterAmount( argumentCount, 2, functionName, true );
-          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-          ConsNode parameter = sexp.GetLeft();
-          if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL ) {
-            while ( !sexp.GetRight().IsAtomNode() )
-              sexp = sexp.GetRight();
-            return this.Eval( sexp.GetLeft(), false );
-          } // if
-          else
-            return parameter;
+          ConsNode parameter;
+          while ( !sexp.GetRight().IsAtomNode() ) {
+            parameter = this.Eval( sexp.GetLeft(), false );
+            if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() != DataType.NIL )
+              return parameter;
+            sexp = sexp.GetRight();
+          } // while
+          
+          return this.Eval( sexp.GetLeft(), false );
         } // else if
         else
           throw new SystemMessageException( "AtANF", functionName );
@@ -351,13 +351,14 @@ public class TreeBuilder {
   
   private ConsNode Clone( ConsNode head ) {
     ConsNode aNode;
-    if ( head.IsAtomNode() )
-      return new AtomNode( ( ( AtomNode ) head ).GetAtom(), ( ( AtomNode ) head ).GetDataType() );
+    if ( head.IsAtomNode() ) {
+      AtomNode tTer = ( AtomNode ) head;
+      return new AtomNode( tTer.GetAtom(), tTer.GetDataType() );
+    } // if
     else {
       aNode = new ConsNode();
       aNode.SetLeft( this.Clone( head.GetLeft() ) );
       aNode.SetRight( this.Clone( head.GetRight() ) );
-      this.TreeTravel( aNode, 0, true, false);
       return aNode;
     } // else
   } // Clone()
@@ -693,18 +694,16 @@ public class TreeBuilder {
       return new AtomNode( 0, 0 );
   } // DecideTorNil()
   
-  private ConsNode MakeDecision( ConsNode condition, ConsNode Tpart, ConsNode NILpart, boolean isCond )
+  private ConsNode MakeDecision( ConsNode condition, ConsNode Tpart, ConsNode NILpart )
   throws SystemMessageException {
     if ( condition.IsAtomNode() )
-      if ( ( ( AtomNode ) condition ).GetDataType() == DataType.NIL && !isCond )
+      if ( ( ( AtomNode ) condition ).GetDataType() == DataType.NIL )
         if ( NILpart != null )
           return this.Eval( NILpart, false );
         else
           throw new SystemMessageException( "NRV" );
-      else if ( ( ( AtomNode ) condition ).GetDataType() != DataType.NIL )
-        return this.Eval( Tpart, false );
       else
-        throw new SystemMessageException( "NRV" );
+        return this.Eval( Tpart, false );
     else
       return this.Eval( Tpart, false );
   } // MakeDecision()
@@ -719,58 +718,76 @@ public class TreeBuilder {
     } // catch
     ConsNode condition = this.Clone( sexp.GetLeft() );
     return this.MakeDecision( this.Eval( condition, false ), 
-                              sexp.GetRight().GetLeft(), sexp.GetRight().GetRight().GetLeft(), false );
+                              sexp.GetRight().GetLeft(), sexp.GetRight().GetRight().GetLeft() );
   } // DoIf()
   
   private ConsNode DoCond( ConsNode sexp, int argumentCount, String functionName )
   throws SystemMessageException {
     AtomNode condition;
+    ConsNode temp;
     ConsNode checkDecisionType;
     try {
+      ConsNode sexpNow = sexp;
       this.CheckParameterAmount( argumentCount, 1, functionName, true );
+      while ( !sexpNow.IsAtomNode() ) {
+        if ( sexpNow.GetLeft().IsAtomNode() )
+          throw new SystemMessageException( "EF" );
+        else {
+          ConsNode conditionNow;
+          int count = 0;
+          conditionNow = sexpNow.GetLeft();
+          while ( !conditionNow.IsAtomNode() ) {
+            count++;
+            conditionNow = conditionNow.GetRight();
+          } // while
+          
+          if ( count < 2 )
+            throw new SystemMessageException( "EF" );
+        } // else
+        
+        sexpNow = sexpNow.GetRight();
+      } // while
     } // try
     catch ( SystemMessageException e ) {
       throw new SystemMessageException( "EF" );
     } // catch
-    if ( !sexp.GetLeft().IsAtomNode() ) {
-      checkDecisionType = null;
-      while ( !sexp.GetRight().IsAtomNode() ) {       
-        if ( checkDecisionType == null )
-          checkDecisionType = this.ParseCond( sexp.GetLeft() );
-        sexp = sexp.GetRight();
-      } // while
-      
-      
-      if ( !sexp.GetLeft().IsAtomNode() ) {
-        if ( sexp.GetLeft().GetLeft().IsAtomNode() ) {
-          condition = ( AtomNode ) sexp.GetLeft().GetLeft();
-          if ( condition.GetAtom().GetData().matches( "else" ) && argumentCount != 0 )
-            condition.SetDataType( DataType.T );
-        } // if
-        
-        if ( checkDecisionType == null )
-          checkDecisionType = this.ParseCond( sexp.GetLeft() );
-      } // if
-      else
-        throw new SystemMessageException( "EF" );
-      return checkDecisionType;
+    
+    checkDecisionType = null;
+    while ( !sexp.GetRight().IsAtomNode() ) {
+      temp = this.ParseCond( sexp.GetLeft() );
+      if ( checkDecisionType == null )
+        checkDecisionType = temp;
+      sexp = sexp.GetRight();
+    } // while
+    
+    if ( sexp.GetLeft().GetLeft().IsAtomNode() ) {
+      condition = ( AtomNode ) sexp.GetLeft().GetLeft();
+      if ( condition.GetAtom().GetData().matches( "else" ) && argumentCount != 1 )
+        condition.SetDataType( DataType.T );
     } // if
-    else
-      throw new SystemMessageException( "EF" );
+    
+    temp = this.ParseCond( sexp.GetLeft() );
+    if ( checkDecisionType == null )
+      checkDecisionType = temp;
+    
+    if ( checkDecisionType == null )
+      throw new SystemMessageException( "NRV" );
+    
+    return checkDecisionType;
   } // DoCond()
   
   private ConsNode ParseCond( ConsNode sexp ) throws SystemMessageException {
-    int count = 0;
-    ConsNode condition = sexp.GetLeft();
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-    while ( !sexp.GetRight().IsAtomNode() ) {
-      sexp = sexp.GetRight();
-      count++;
-    } // while
-    
-    if ( count == 0 )
-      throw new SystemMessageException( "EF" );  
-    return this.MakeDecision( condition, sexp.GetLeft(), DataType.NULL, true );
+    ConsNode condition = this.Eval( this.Clone( sexp.GetLeft() ), false );
+    if ( !condition.IsAtomNode() || ( condition.IsAtomNode() && ! ( ( AtomNode ) condition ).IsNil() ) ) {
+      while ( !sexp.GetRight().IsAtomNode() ) {
+        sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+        sexp = sexp.GetRight();
+      } // while
+      
+      return this.Eval( sexp.GetLeft(), false );
+    } // if
+    else
+      return null;
   } // ParseCond()
   
   public void TreeTravel( ConsNode head, int column, boolean isTop, boolean needSpace ) {
