@@ -128,10 +128,11 @@ public class TreeBuilder {
     } // if
     else {
       head.SetLeft( this.Eval( head.GetLeft(), isTop ) );
-      AtomNode function = ( AtomNode ) head.GetLeft();
-      ConsNode sexp = head.GetRight();
-      String functionName = function.GetAtom().GetData();
-      if ( function.GetDataType() == DataType.SYMBOL ) {
+      if ( head.GetLeft().IsAtomNode() &&
+           ( ( AtomNode ) head.GetLeft() ).GetDataType() == DataType.SYMBOL ) {
+        AtomNode function = ( AtomNode ) head.GetLeft();
+        ConsNode sexp = head.GetRight();
+        String functionName = function.GetAtom().GetData();
         int argumentCount = 0;
         ConsNode nodeNow;
         for ( nodeNow = sexp ; !nodeNow.IsAtomNode() ;
@@ -334,10 +335,11 @@ public class TreeBuilder {
         else
           throw new SystemMessageException( "AtANF", functionName );
       } // else if
-      else if ( function.GetDataType() == DataType.QUOTE )
-        return sexp.GetLeft();
+      else if ( head.GetLeft().IsAtomNode() &&
+                ( ( AtomNode ) head.GetLeft() ).GetDataType() == DataType.QUOTE )
+        return head.GetRight().GetLeft();
       else
-        throw new SystemMessageException( "AtANF", functionName );
+        throw new SystemMessageException( "AtANF", "", head.GetLeft() );
     } // else
   } // Eval()
   
@@ -724,7 +726,6 @@ public class TreeBuilder {
   private ConsNode DoCond( ConsNode sexp, int argumentCount, String functionName )
   throws SystemMessageException {
     AtomNode condition;
-    ConsNode temp;
     ConsNode checkDecisionType;
     try {
       ConsNode sexpNow = sexp;
@@ -754,9 +755,8 @@ public class TreeBuilder {
     
     checkDecisionType = null;
     while ( !sexp.GetRight().IsAtomNode() ) {
-      temp = this.ParseCond( sexp.GetLeft() );
       if ( checkDecisionType == null )
-        checkDecisionType = temp;
+        checkDecisionType = this.ParseCond( sexp.GetLeft() );
       sexp = sexp.GetRight();
     } // while
     
@@ -766,9 +766,8 @@ public class TreeBuilder {
         condition.SetDataType( DataType.T );
     } // if
     
-    temp = this.ParseCond( sexp.GetLeft() );
     if ( checkDecisionType == null )
-      checkDecisionType = temp;
+      checkDecisionType = this.ParseCond( sexp.GetLeft() );
     
     if ( checkDecisionType == null )
       throw new SystemMessageException( "NRV" );

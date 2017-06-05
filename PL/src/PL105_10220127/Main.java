@@ -18,7 +18,7 @@ public class Main {
       head = null;
       try {
         head = tb.TreeConStruct( head, tokens, getter );
-        head = tb.Eval( head, true );
+        //head = tb.Eval( head, true );
         getter.ResetColumn();
         if ( getter.IsEmpty() )
           getter.SetLine( 0 );
@@ -59,8 +59,10 @@ public class Main {
             System.out.println( e.GetAtom() + " defined" );
           else if ( e.GetSystemCode().matches( "US" ) )
             System.out.println( "ERROR (unbound symbol) : " + e.GetAtom() );
-          else if ( e.GetSystemCode().matches( "AtANF" ) )
-            System.out.println( "ERROR (attempt to apply non-function) : " + e.GetAtom() );
+          else if ( e.GetSystemCode().matches( "AtANF" ) ) {
+            System.out.print( "ERROR (attempt to apply non-function) : " );
+            tb.TreeTravel( e.GetHead(), 0, true, false );
+          } // else if
           else if ( e.GetSystemCode().matches( "INoA" ) )
             System.out.println( "ERROR (incorrect number of arguments) : " + e.GetAtom() );
           else if ( e.GetSystemCode().matches( "IAT" ) ) {
