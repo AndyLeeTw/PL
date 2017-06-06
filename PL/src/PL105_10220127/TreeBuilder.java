@@ -51,9 +51,9 @@ public class TreeBuilder {
           head.SetLeft( this.mTransTyper );
           this.mTransTyper = new ConsNode();
           head.SetRight( this.mTransTyper );
-          this.mTransTyper.SetLeft( TreeConStruct( DataType.NULL, tokens, Getter ) );
+          head.GetRight().SetLeft( TreeConStruct( DataType.NULL, tokens, Getter ) );
           ConsNode tTr = new AtomNode( 0, 0 );
-          this.mTransTyper.SetRight( tTr );
+          head.GetRight().SetRight( tTr );
         } // if
         else if ( aToken.GetData().matches( "[\\.)]" ) )
           throw new SystemMessageException( "UTL", aToken.GetData(), aToken.GetLine(),
@@ -456,15 +456,6 @@ public class TreeBuilder {
     } // if
     else
       throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexp.GetLeft() );
-    
-    if ( operator == DIVIDE ) {
-      count *= 1000;
-      Float decimal = new Float( count );
-      count = decimal.intValue();
-      if ( decimal.floatValue() - count >= 0.5 )
-        count++;
-      count /= 1000;
-    } // if
     
     if ( isIntDivide )
       return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );

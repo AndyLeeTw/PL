@@ -18,7 +18,7 @@ public class Main {
       head = null;
       try {
         head = tb.TreeConStruct( head, tokens, getter );
-        //head = tb.Eval( head, true );
+        head = tb.Eval( head, true );
         getter.ResetColumn();
         if ( getter.IsEmpty() )
           getter.SetLine( 0 );
