@@ -63,14 +63,10 @@ public class TreeBuilder {
             head = new AtomNode( aToken, DataType.QUOTE );
           else if ( aToken.GetData().matches( "nil" ) || aToken.GetData().matches( "#f" ) )
             head = new AtomNode( aToken.GetLine(), aToken.GetColumn() );
-          else if ( aToken.GetData().matches( "^[+-]?\\d+$" ) ) {
-            aToken.SetData( String.format( "%.0f", Float.valueOf( aToken.GetData() ) ) );
+          else if ( aToken.GetData().matches( "^[+-]?\\d+$" ) )
             head = new AtomNode( aToken, DataType.INT );
-          } // else if
-          else if ( aToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) ) {
-            aToken.SetData( String.format( "%.3f", Float.valueOf( aToken.GetData() ) ) );
+          else if ( aToken.GetData().matches( "^[+-]?(((0-9)*\\.[0-9]+)|([0-9]+\\.[0-9]*))$" ) )
             head = new AtomNode( aToken, DataType.FLOAT );
-          } // else if
           else if ( aToken.GetData().matches( "t" ) || aToken.GetData().matches( "#t" ) ) {
             aToken.SetData( "#t" );
             head = new AtomNode( aToken, DataType.T );
@@ -417,50 +413,49 @@ public class TreeBuilder {
                                String functionName, int operator ) throws SystemMessageException {
     float count = 0;
     boolean isIntDivide = false;
+    ConsNode sexpNow = sexp;
     this.CheckParameterAmount( argumentCount, 2, functionName, true );
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-    if ( this.IsReal( sexp.GetLeft() ) ) {
-      AtomNode parameter = ( AtomNode ) sexp.GetLeft();
-      isIntDivide = this.IsIntDivide( parameter );
-      count = Float.parseFloat(  parameter.GetAtom().GetData() );
-      sexp = sexp.GetRight();
-      while ( !sexp.IsAtomNode() ) {
-        sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-        if ( this.IsReal( sexp.GetLeft() ) ) {
-          parameter = ( AtomNode ) sexp.GetLeft();
-          if ( isIntDivide ) // if one parameter is float, the divide is float divide
-            isIntDivide = this.IsIntDivide( parameter );
-          
-          if ( operator == PLUS )
-            count += Float.parseFloat(  parameter.GetAtom().GetData() );
-          else if ( operator == SUBTRACT )
-            count -= Float.parseFloat(  parameter.GetAtom().GetData() );
-          else if ( operator == MULTIPLY )
-            count *= Float.parseFloat(  parameter.GetAtom().GetData() );
-          else if ( operator == DIVIDE ) {
-            if ( Float.parseFloat(  parameter.GetAtom().GetData() ) != 0 ) {
-              count /= Float.parseFloat(  parameter.GetAtom().GetData() );
-              if ( isIntDivide ) {
-                Float integer = new Float( count );
-                count = integer.intValue();
-              } // if
-            } // if
-            else
-              throw new SystemMessageException( "DbZ" );
-          } // else if
+    while ( !sexpNow.IsAtomNode() ) {
+      sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false ) );
+      if ( !this.IsReal( sexpNow.GetLeft() ) )
+        throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexpNow.GetLeft() );
+      sexpNow = sexpNow.GetRight();
+    } // while
+    
+    AtomNode parameter = ( AtomNode ) sexp.GetLeft();
+    isIntDivide = this.IsIntDivide( parameter );
+    count = parameter.GetVaule();
+    sexp = sexp.GetRight();
+    while ( !sexp.IsAtomNode() ) {
+      parameter = ( AtomNode ) sexp.GetLeft();
+      if ( isIntDivide ) // if one parameter is float, the divide is float divide
+        isIntDivide = this.IsIntDivide( parameter );
+      
+      if ( operator == PLUS )
+        count += parameter.GetVaule();
+      else if ( operator == SUBTRACT )
+        count -= parameter.GetVaule();
+      else if ( operator == MULTIPLY )
+        count *= parameter.GetVaule();
+      else if ( operator == DIVIDE ) {
+        if ( Float.parseFloat(  parameter.GetAtom().GetData() ) != 0 ) {
+          count /= parameter.GetVaule();
+          if ( isIntDivide ) {
+            Float integer = new Float( count );
+            count = integer.intValue();
+          } // if
         } // if
         else
-          throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexp.GetLeft() );
-        sexp = sexp.GetRight();
-      } // while
-    } // if
-    else
-      throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexp.GetLeft() );
+          throw new SystemMessageException( "DbZ" );
+      } // else if
+      
+      sexp = sexp.GetRight();
+    } // while
     
     if ( isIntDivide )
-      return new AtomNode( new Token( String.format( "%.0f", count ), 0, 0 ), DataType.INT );
+      return new AtomNode( new Token( String.format( "%f", count ), 0, 0 ), DataType.INT );
     else
-      return new AtomNode( new Token( String.format( "%.3f", count ), 0, 0 ), DataType.FLOAT );
+      return new AtomNode( new Token( String.format( "%f", count ), 0, 0 ), DataType.FLOAT );
   } // Arithmetic()
   
   private ConsNode Compare( ConsNode sexp, int argumentCount, String functionName, int operator )
@@ -472,13 +467,13 @@ public class TreeBuilder {
     sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
     if ( this.IsReal( sexp.GetLeft() ) ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
-      comparer = Float.parseFloat(  parameter.GetAtom().GetData() );
+      comparer = parameter.GetVaule();
       sexp = sexp.GetRight();
       while ( !sexp.IsAtomNode() ) {
         sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
         if ( this.IsReal( sexp.GetLeft() ) ) {
           parameter = ( AtomNode ) sexp.GetLeft();
-          compared = Float.parseFloat(  parameter.GetAtom().GetData() );
+          compared = parameter.GetVaule();
           if ( inOrder )
             if ( operator == MORE )
               if ( comparer > compared )
@@ -627,9 +622,8 @@ public class TreeBuilder {
         return this.NIL();
     } // if
     else if ( !treeA.IsAtomNode() && !treeB.IsAtomNode() ) {
-      AtomNode leftResult, rightResult;
-      leftResult = this.TreeCompare( treeA.GetLeft(), treeB.GetLeft() );
-      rightResult = this.TreeCompare( treeA.GetRight(), treeB.GetRight() );
+      AtomNode leftResult = this.TreeCompare( treeA.GetLeft(), treeB.GetLeft() );
+      AtomNode rightResult = this.TreeCompare( treeA.GetRight(), treeB.GetRight() );
       if ( leftResult.IsNil() || rightResult.IsNil() )
         return this.NIL();
       else
@@ -682,9 +676,9 @@ public class TreeBuilder {
                                  int dataType1, int dataType2 ) throws SystemMessageException {
     if ( ! ( ( AtomNode ) this.DecideTorNil( sexp, argumentCount, functionName, dataType1 ) ).IsNil() ||
          ! ( ( AtomNode ) this.DecideTorNil( sexp, argumentCount, functionName, dataType2 ) ).IsNil() )
-      return new AtomNode( new Token( "#t", 0, 0 ), DataType.T );
+      return this.T();
     else
-      return new AtomNode( 0, 0 );
+      return this.NIL();
   } // DecideTorNil()
   
   private ConsNode MakeDecision( ConsNode condition, ConsNode Tpart, ConsNode NILpart )
