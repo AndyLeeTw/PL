@@ -2,6 +2,7 @@ package PL105_10220127;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Stack;
 
 public class TreeBuilder {
   private static final int PLUS = 0;
@@ -17,7 +18,7 @@ public class TreeBuilder {
       "list", "car", "cdr", "pair?", "null?", "integer?", "real?", "number?", "string?", "not", "and", "or",
       "boolean?", "symbol?", "+", "-", "*", "/", ">", "<", "=", ">=", "exit",
       "<=", "string-append", "string>?", "string<?", "string=?", "eqv?",
-      "equal?", "begin", "if", "cond", "list?", "atom?" };
+      "equal?", "begin", "if", "cond", "list?", "atom?", "let" };
   private ConsNode mTransTyper;
   private LinkedHashMap<String, ConsNode>mSymbolTable = new LinkedHashMap<String, ConsNode>();
   
@@ -327,6 +328,17 @@ public class TreeBuilder {
           } // while
           
           return this.Eval( sexp.GetLeft(), false );
+        } // else if
+        else if ( functionName.matches( "#<procedure let>" ) ) {
+          try {
+            StacklocalVaule = new Stack();
+            return this.Let(sexp, argumentCount, localVaule );
+          } catch ( SystemMessageException e ) {
+            if ( e.GetSystemCode().matches( "EF" ) )
+              throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
+            else
+              throw e;
+          } // catch
         } // else if
         else
           throw new SystemMessageException( "AtANF", functionName );
@@ -654,7 +666,7 @@ public class TreeBuilder {
     
     return new AtomNode( new Token( allString + "\"", 0, 0 ), DataType.STRING );
   } // ComcatString()
-  
+
   private ConsNode DecideTorNil( ConsNode parameter, int argumentCount, String functionName, int dataType )
   throws SystemMessageException {
     this.CheckParameterAmount( argumentCount, 1, functionName, false );
@@ -773,6 +785,44 @@ public class TreeBuilder {
     else
       return null;
   } // ParseCond()
+  
+  private ConsNode Let( ConsNode sexp, int argumentCount, Stack localValue ) throws SystemMessageException {
+    try {
+      this.CheckParameterAmount(argumentCount, 2, "#<procedure let>", true );
+    } catch ( SystemMessageException e ) {
+      throw new SystemMessageException( "EF" );
+    } // catch
+    
+    if ( !sexp.GetLeft().IsAtomNode() ) {
+      int count = 1;
+      ConsNode sexpFirstNow = sexp.GetLeft();
+        if ( !sexpFirstNow.IsAtomNode() ) {
+          if( !sexpFirstNow.GetLeft().IsAtomNode() ||
+              ( ( AtomNode ) sexpFirstNow.GetLeft() ).GetDataType() == DataType.SYMBOL ) ;
+          else  
+            throw new SystemMessageException( "EF" );
+          sexpFirstNow = sexpFirstNow.GetRight();
+          while ( !sexpFirstNow.IsAtomNode() ) {
+            count++;
+            sexpFirstNow = sexpFirstNow.GetRight();
+          } // while
+          
+          if ( ! ( ( AtomNode ) sexpFirstNow ).IsNil() || count != 2 )
+            throw new SystemMessageException( "EF" );
+        } // if
+        else
+          throw new SystemMessageException( "EF" );
+    } // if
+    else if ( ( ( AtomNode ) sexp.GetLeft() ).IsNil() ) ;
+    else
+      throw new SystemMessageException( "EF" );
+    
+    while ( !sexp.IsAtomNode() ) {
+      
+    }
+    
+    return null;
+  }
   
   public void TreeTravel( ConsNode head, int column, boolean isTop, boolean needSpace ) {
     if ( head == null ) ;
