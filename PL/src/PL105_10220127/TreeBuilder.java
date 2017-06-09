@@ -2,7 +2,6 @@ package PL105_10220127;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Stack;
 
 public class TreeBuilder {
   private static final int PLUS = 0;
@@ -18,12 +17,14 @@ public class TreeBuilder {
       "list", "car", "cdr", "pair?", "null?", "integer?", "real?", "number?", "string?", "not", "and", "or",
       "boolean?", "symbol?", "+", "-", "*", "/", ">", "<", "=", ">=", "exit",
       "<=", "string-append", "string>?", "string<?", "string=?", "eqv?",
-      "equal?", "begin", "if", "cond", "list?", "atom?", "let" };
+      "equal?", "begin", "if", "cond", "list?", "atom?", "let", "lambda" };
   private ConsNode mTransTyper;
   private LinkedHashMap<String, ConsNode>mSymbolTable = new LinkedHashMap<String, ConsNode>();
+  private ValueStack mLocalVar;
   
   public TreeBuilder() {
     this.AddPermitiveSymbol();
+    this.mLocalVar = new ValueStack();
   } // TreeBuilder()
   
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
@@ -111,12 +112,19 @@ public class TreeBuilder {
     return tokens.get( 0 );
   } // ReadSexp()
   
-  public ConsNode Eval( ConsNode head, boolean isTop ) throws SystemMessageException {
+  public ConsNode Eval( ConsNode head, boolean isTop, boolean isInScope ) throws SystemMessageException {
     if ( head.IsAtomNode() ) {
       if ( ( ( AtomNode ) head ).GetDataType() != DataType.SYMBOL )
         return head;
       else {
         String key = ( ( AtomNode ) head ).GetAtom().GetData();
+        if ( isInScope ) {
+          ConsNode varValue;
+          varValue = this.mLocalVar.GetLocalValue( key );
+          if ( varValue != null )
+            return varValue;
+        } // if
+        
         if ( this.mSymbolTable.containsKey( key ) )
           return this.mSymbolTable.get( key );
         else
@@ -124,7 +132,7 @@ public class TreeBuilder {
       } // else
     } // if
     else {
-      head.SetLeft( this.Eval( head.GetLeft(), isTop ) );
+      head.SetLeft( this.Eval( head.GetLeft(), isTop, isInScope ) );
       if ( head.GetLeft().IsAtomNode() &&
            ( ( AtomNode ) head.GetLeft() ).GetDataType() == DataType.SYMBOL ) {
         AtomNode function = ( AtomNode ) head.GetLeft();
@@ -153,52 +161,41 @@ public class TreeBuilder {
           } // if
           else { // #<procedure define>
             try {
-              this.CheckParameterAmount( argumentCount, 2, functionName, false );
-            } // try
-            catch ( SystemMessageException e ) {
-              throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
-            } // catch
-            if ( sexp.GetLeft().IsAtomNode() ) {
-              String key = ( ( AtomNode ) sexp.GetLeft() ).GetAtom().GetData();
-              if ( ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == DataType.SYMBOL ) {
-                if ( !this.IsPermitiveSymbol( key ) ) {
-                  this.mSymbolTable.put( key, this.Eval( sexp.GetRight().GetLeft(), false ) );
-                  throw new SystemMessageException( "DEFINE", key );
-                } // if
-                else
-                  throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
-              } // if
+              this.Define( sexp, argumentCount );
+            } catch( SystemMessageException e ) {
+              if ( e.GetSystemCode().matches( "EF" ) && e.GetHead() == null )
+                throw new SystemMessageException( "EF", "DEFINE", head );
               else
-                throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
-            } // if
-            else
-              throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
+                throw e;
+            } // else
+            
+            return null; // impossible reach here
           } // else
         } // if
         else if ( functionName.matches( "#<procedure (cons|eqv[?]|equal[?])>" ) ) {
           this.CheckParameterAmount( argumentCount, 2, functionName, false );     
           if ( functionName.matches( "#<procedure eqv[?]>" ) )
-            return this.CompareVeecor( sexp );
+            return this.CompareVeecor( sexp, isInScope );
           else if ( functionName.matches( "#<procedure equal[?]>" ) )
-            return this.Equal( sexp );
+            return this.Equal( sexp, isInScope );
           else {
-            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
-            sexp.SetRight( this.Eval( sexp.GetRight().GetLeft(), false ) );
+            sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
+            sexp.SetRight( this.Eval( sexp.GetRight().GetLeft(), false, isInScope ) );
             return sexp;
           } // else
         } // else if
         else if ( functionName.matches( "#<procedure list>" ) ) {
           ConsNode sexpNow = sexp;
           while ( !sexpNow.IsAtomNode() ) {
-            sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false ) );
+            sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false, isInScope ) );
             sexpNow = sexpNow.GetRight();
           } // while
           
           return sexp;
         } // else if
         else if ( functionName.matches( "#<procedure c[ad]r>" ) ) {
-          this.CheckParameterAmount( argumentCount, 1, functionName, false );
-          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          this.CheckParameterAmount( argumentCount, 1, functionName, isInScope );
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false, false ) );
           if ( !sexp.GetLeft().IsAtomNode() )
             if ( functionName.matches( "#<procedure car>" ) )
               return sexp.GetLeft().GetLeft();
@@ -209,7 +206,7 @@ public class TreeBuilder {
         } // else if
         else if ( functionName.matches( "#<procedure (pair|list)[?]>" ) ) {
           this.CheckParameterAmount( argumentCount, 1, functionName, false );
-          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
           if ( !sexp.GetLeft().IsAtomNode() )
             return this.T();
           else if ( functionName.matches( "#<procedure list[?]>" ) &&
@@ -220,62 +217,65 @@ public class TreeBuilder {
         } // else if
         else if ( functionName.matches( "#<procedure atom[?]>" ) ) {
           this.CheckParameterAmount( argumentCount, 1, functionName, false );
-          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
           if ( sexp.GetLeft().IsAtomNode() )
             return this.T();
           else
             return this.NIL();
         } // else if
         else if ( functionName.matches( "#<procedure null[?]>" ) )
-          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.NIL );
+          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.NIL, isInScope );
         else if ( functionName.matches( "#<procedure integer[?]>" ) )
-          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.INT );
+          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.INT, isInScope );
         else if ( functionName.matches( "#<procedure (real|number)[?]>" ) )
           return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName,
-                                    DataType.INT, DataType.FLOAT );
+                                    DataType.INT, DataType.FLOAT, isInScope );
         else if ( functionName.matches( "#<procedure string[?]>" ) )
-          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.STRING );
+          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName,
+                                    DataType.STRING, isInScope );
         else if ( functionName.matches( "#<procedure boolean[?]>" ) )
-          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.T, DataType.NIL );
+          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.T,
+                                    DataType.NIL, isInScope );
         else if ( functionName.matches( "#<procedure symbol[?]>" ) )
-          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName, DataType.SYMBOL );
+          return this.DecideTorNil( sexp.GetLeft(), argumentCount, functionName,
+                                    DataType.SYMBOL, isInScope );
         else if ( functionName.matches( "#<procedure not>" ) ) {
           this.CheckParameterAmount( argumentCount, 1, functionName, false );
-          sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+          sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
           if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).IsNil() )
             return this.T();
           else
             return this.NIL();
         } // else if
         else if ( functionName.matches( "#<procedure [+]>" ) )
-          return this.Arithmetic( sexp, argumentCount, functionName, PLUS );
+          return this.Arithmetic( sexp, argumentCount, functionName, PLUS, isInScope );
         else if ( functionName.matches( "#<procedure [-]>" ) )
-          return this.Arithmetic( sexp, argumentCount, functionName, SUBTRACT );
+          return this.Arithmetic( sexp, argumentCount, functionName, SUBTRACT, isInScope );
         else if ( functionName.matches( "#<procedure [*]>" ) )
-          return this.Arithmetic( sexp, argumentCount, functionName, MULTIPLY );
+          return this.Arithmetic( sexp, argumentCount, functionName, MULTIPLY, isInScope );
         else if ( functionName.matches( "#<procedure [/]>" ) )
-          return this.Arithmetic( sexp, argumentCount, functionName, DIVIDE );
+          return this.Arithmetic( sexp, argumentCount, functionName, DIVIDE, isInScope );
         else if ( functionName.matches( "#<procedure >>" ) )
-          return this.Compare( sexp, argumentCount, functionName, MORE );
+          return this.Compare( sexp, argumentCount, functionName, MORE, isInScope );
         else if ( functionName.matches( "#<procedure <>" ) )
-          return this.Compare( sexp, argumentCount, functionName, LESS );
+          return this.Compare( sexp, argumentCount, functionName, LESS, isInScope );
         else if ( functionName.matches( "#<procedure =>" ) )
-          return this.Compare( sexp, argumentCount, functionName, EQUAL );
+          return this.Compare( sexp, argumentCount, functionName, EQUAL, isInScope );
         else if ( functionName.matches( "#<procedure >=>" ) )
-          return this.Compare( sexp, argumentCount, functionName, MOREEQUAL );
+          return this.Compare( sexp, argumentCount, functionName, MOREEQUAL, isInScope );
         else if ( functionName.matches( "#<procedure <=>" ) )
-          return this.Compare( sexp, argumentCount, functionName, LESSEQUAL );
+          return this.Compare( sexp, argumentCount, functionName, LESSEQUAL, isInScope );
         else if ( functionName.matches( "#<procedure string>[?]>" ) )
-          return this.CompareString( sexp, argumentCount, functionName, MORE );
+          return this.CompareString( sexp, argumentCount, functionName, MORE, isInScope );
         else if ( functionName.matches( "#<procedure string<[?]>" ) )
-          return this.CompareString( sexp, argumentCount, functionName, LESS );
+          return this.CompareString( sexp, argumentCount, functionName, LESS, isInScope );
         else if ( functionName.matches( "#<procedure string=[?]>" ) )
-          return this.CompareString( sexp, argumentCount, functionName, EQUAL );
+          return this.CompareString( sexp, argumentCount, functionName, EQUAL, isInScope );
         else if ( functionName.matches( "#<procedure string-append>" ) )
-          return this.ComcatString( sexp, argumentCount, functionName );
+          return this.ComcatString( sexp, argumentCount, functionName, isInScope );
         else if ( functionName.matches( "#<procedure if>" ) ) {
           try {
-            return this.DoIf( sexp, argumentCount, functionName );
+            return this.DoIf( sexp, argumentCount, functionName, isInScope );
           } catch ( SystemMessageException e ) {
             if ( e.GetSystemCode().matches( "NRV" ) )
               throw new SystemMessageException( "NRV", "", head );
@@ -285,12 +285,16 @@ public class TreeBuilder {
         } // else if
         else if ( functionName.matches( "#<procedure cond>" ) ) {
           try {
-            return this.DoCond( sexp, argumentCount, functionName );
+            this.ParseCond( sexp, argumentCount, functionName, isInScope );
+            return this.DoCond( sexp, argumentCount, isInScope );
           } catch ( SystemMessageException e ) {
-            if ( e.GetSystemCode().matches( "EF" ) )
-              throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
-            else if ( e.GetSystemCode().matches( "NRV" ) )
-              throw new SystemMessageException( "NRV", "", head );
+            if( e.GetHead() == null )
+              if ( e.GetSystemCode().matches( "EF" ) )
+                throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
+              else if ( e.GetSystemCode().matches( "NRV" ) )
+                throw new SystemMessageException( "NRV", "", head );
+              else
+                throw e;
             else
               throw e;
           } // catch
@@ -299,7 +303,7 @@ public class TreeBuilder {
           ConsNode parameter;
           this.CheckParameterAmount( argumentCount, 1, functionName, true );
           do {
-            sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+            sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
             parameter = sexp.GetLeft();
             sexp = sexp.GetRight();  
           } while ( !sexp.IsAtomNode() );
@@ -309,32 +313,31 @@ public class TreeBuilder {
           this.CheckParameterAmount( argumentCount, 2, functionName, true );
           ConsNode parameter;
           while ( !sexp.GetRight().IsAtomNode() ) {
-            parameter = this.Eval( sexp.GetLeft(), false );
+            parameter = this.Eval( sexp.GetLeft(), false, isInScope );
             if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() == DataType.NIL )
               return parameter;
             sexp = sexp.GetRight();
           } // while
           
-          return this.Eval( sexp.GetLeft(), false );
+          return this.Eval( sexp.GetLeft(), false, isInScope );
         } // else if
         else if ( functionName.matches( "#<procedure or>" ) ) {
           this.CheckParameterAmount( argumentCount, 2, functionName, true );
           ConsNode parameter;
           while ( !sexp.GetRight().IsAtomNode() ) {
-            parameter = this.Eval( sexp.GetLeft(), false );
+            parameter = this.Eval( sexp.GetLeft(), false, isInScope );
             if ( parameter.IsAtomNode() && ( ( AtomNode ) parameter ).GetDataType() != DataType.NIL )
               return parameter;
             sexp = sexp.GetRight();
           } // while
           
-          return this.Eval( sexp.GetLeft(), false );
+          return this.Eval( sexp.GetLeft(), false, isInScope );
         } // else if
         else if ( functionName.matches( "#<procedure let>" ) ) {
           try {
-            StacklocalVaule = new Stack();
-            return this.Let(sexp, argumentCount, localVaule );
+            return this.Let( sexp, argumentCount, isInScope );
           } catch ( SystemMessageException e ) {
-            if ( e.GetSystemCode().matches( "EF" ) )
+            if ( e.GetSystemCode().matches( "EF" ) && e.GetHead() == null )
               throw new SystemMessageException( "EF", this.TakeRealFunction( functionName ), head );
             else
               throw e;
@@ -358,6 +361,10 @@ public class TreeBuilder {
   private AtomNode NIL() {
     return new AtomNode( 0, 0 );
   } // NIL()
+  
+  public void LocalValueClear() {
+    this.mLocalVar.Clear();;
+  } // LocalValueClear()
   
   private ConsNode Clone( ConsNode head ) {
     ConsNode aNode;
@@ -421,14 +428,14 @@ public class TreeBuilder {
       return false;
   } // IsReal()
   
-  private ConsNode Arithmetic( ConsNode sexp, int argumentCount,
-                               String functionName, int operator ) throws SystemMessageException {
+  private ConsNode Arithmetic( ConsNode sexp, int argumentCount, String functionName,
+                               int operator, boolean isInScope ) throws SystemMessageException {
     float count = 0;
     boolean isIntDivide = false;
     ConsNode sexpNow = sexp;
     this.CheckParameterAmount( argumentCount, 2, functionName, true );
     while ( !sexpNow.IsAtomNode() ) {
-      sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false ) );
+      sexpNow.SetLeft( this.Eval( sexpNow.GetLeft(), false, isInScope ) );
       if ( !this.IsReal( sexpNow.GetLeft() ) )
         throw new SystemMessageException( "IAT", this.TakeRealFunction( functionName ), sexpNow.GetLeft() );
       sexpNow = sexpNow.GetRight();
@@ -470,19 +477,19 @@ public class TreeBuilder {
       return new AtomNode( new Token( String.format( "%f", count ), 0, 0 ), DataType.FLOAT );
   } // Arithmetic()
   
-  private ConsNode Compare( ConsNode sexp, int argumentCount, String functionName, int operator )
-  throws SystemMessageException {
+  private ConsNode Compare( ConsNode sexp, int argumentCount, String functionName,
+                            int operator, boolean isInScope ) throws SystemMessageException {
     float comparer = 0;
     float compared = 0;
     boolean inOrder = true; 
     this.CheckParameterAmount( argumentCount, 2, functionName, true );
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
     if ( this.IsReal( sexp.GetLeft() ) ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
       comparer = parameter.GetVaule();
       sexp = sexp.GetRight();
       while ( !sexp.IsAtomNode() ) {
-        sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+        sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
         if ( this.IsReal( sexp.GetLeft() ) ) {
           parameter = ( AtomNode ) sexp.GetLeft();
           compared = parameter.GetVaule();
@@ -535,19 +542,19 @@ public class TreeBuilder {
       return false;
   } // IsIntDivide()
   
-  private ConsNode CompareString( ConsNode sexp, int argumentCount, String functionName, int operator )
-  throws SystemMessageException {
+  private ConsNode CompareString( ConsNode sexp, int argumentCount, String functionName,
+                                  int operator, boolean isInScope ) throws SystemMessageException {
     String compareString;
     String nextString;
     boolean inOrder = true;
     this.CheckParameterAmount( argumentCount, 2, functionName, true );
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
     if ( sexp.GetLeft().IsAtomNode() && ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == DataType.STRING ) {
       AtomNode parameter = ( AtomNode ) sexp.GetLeft();
       compareString = parameter.GetAtom().GetData();
       sexp = sexp.GetRight();
       while ( !sexp.IsAtomNode() ) {
-        sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+        sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
         if ( sexp.GetLeft().IsAtomNode() &&
              ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == DataType.STRING ) {
           parameter = ( AtomNode ) sexp.GetLeft();
@@ -585,12 +592,12 @@ public class TreeBuilder {
       return this.NIL();
   } // CompareString()
   
-  private AtomNode CompareVeecor( ConsNode sexp ) throws SystemMessageException {
+  private AtomNode CompareVeecor( ConsNode sexp, boolean isInScope ) throws SystemMessageException {
     ConsNode leftParameter, rightParameter;
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
     leftParameter = sexp.GetLeft();
     sexp = sexp.GetRight();
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
     rightParameter = sexp.GetLeft();
     if ( leftParameter.IsAtomNode() && rightParameter.IsAtomNode() ) {
       AtomNode left = ( AtomNode ) leftParameter;
@@ -614,12 +621,12 @@ public class TreeBuilder {
       return this.NIL();
   } // CompareVeecor()
   
-  private AtomNode Equal( ConsNode sexp ) throws SystemMessageException {
+  private AtomNode Equal( ConsNode sexp, boolean isInScope ) throws SystemMessageException {
     ConsNode leftParameter, rightParameter;
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
     leftParameter = sexp.GetLeft();
     sexp = sexp.GetRight();
-    sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+    sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
     rightParameter = sexp.GetLeft();
     return this.TreeCompare( leftParameter, rightParameter );
   } // Equal()
@@ -645,14 +652,14 @@ public class TreeBuilder {
       return this.NIL();
   } // TreeCompare()
   
-  private ConsNode ComcatString( ConsNode sexp, int argumentCount, String functionName )
+  private ConsNode ComcatString( ConsNode sexp, int argumentCount, String functionName, boolean isInScope )
   throws SystemMessageException {
     String allString = "\"";
     String comcatingString;
     AtomNode parameter;
     this.CheckParameterAmount( argumentCount, 2, functionName, true );
     while ( !sexp.IsAtomNode() ) {
-      sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+      sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
       if ( sexp.GetLeft().IsAtomNode() &&
            ( ( AtomNode ) sexp.GetLeft() ).GetDataType() == DataType.STRING ) {
         parameter = ( AtomNode ) sexp.GetLeft();
@@ -667,10 +674,10 @@ public class TreeBuilder {
     return new AtomNode( new Token( allString + "\"", 0, 0 ), DataType.STRING );
   } // ComcatString()
 
-  private ConsNode DecideTorNil( ConsNode parameter, int argumentCount, String functionName, int dataType )
-  throws SystemMessageException {
+  private ConsNode DecideTorNil( ConsNode parameter, int argumentCount, String functionName, int dataType,
+                                 boolean isInScope ) throws SystemMessageException {
     this.CheckParameterAmount( argumentCount, 1, functionName, false );
-    parameter = this.Eval( parameter, false );
+    parameter = this.Eval( parameter, false, isInScope );
     if ( parameter.IsAtomNode() )
       if ( ( ( AtomNode ) parameter ).GetDataType() == dataType )
         if ( dataType == DataType.SYMBOL && !this.IsPermitiveSymbol( parameter.ToString() ) &&
@@ -684,30 +691,32 @@ public class TreeBuilder {
       return this.NIL();
   } // DecideTorNil()
   
-  private ConsNode DecideTorNil( ConsNode sexp, int argumentCount, String functionName,
-                                 int dataType1, int dataType2 ) throws SystemMessageException {
-    if ( ! ( ( AtomNode ) this.DecideTorNil( sexp, argumentCount, functionName, dataType1 ) ).IsNil() ||
-         ! ( ( AtomNode ) this.DecideTorNil( sexp, argumentCount, functionName, dataType2 ) ).IsNil() )
+  private ConsNode DecideTorNil( ConsNode sexp, int argumentCount, String functionName, int dataType1,
+                                 int dataType2, boolean isInScope ) throws SystemMessageException {
+    if ( ! ( ( AtomNode ) this.DecideTorNil( sexp, argumentCount, functionName,
+                                             dataType1, isInScope ) ).IsNil() ||
+         ! ( ( AtomNode ) this.DecideTorNil( sexp, argumentCount, functionName,
+                                             dataType2, isInScope ) ).IsNil() )
       return this.T();
     else
       return this.NIL();
   } // DecideTorNil()
   
-  private ConsNode MakeDecision( ConsNode condition, ConsNode Tpart, ConsNode NILpart )
+  private ConsNode MakeDecision( ConsNode condition, ConsNode Tpart, ConsNode NILpart, boolean isInScope )
   throws SystemMessageException {
     if ( condition.IsAtomNode() )
       if ( ( ( AtomNode ) condition ).GetDataType() == DataType.NIL )
         if ( NILpart != null )
-          return this.Eval( NILpart, false );
+          return this.Eval( NILpart, false, isInScope );
         else
-          throw new SystemMessageException( "NRV" );
+          throw new SystemMessageException( "NRV", "", DataType.NULL );
       else
-        return this.Eval( Tpart, false );
+        return this.Eval( Tpart, false, isInScope );
     else
-      return this.Eval( Tpart, false );
+      return this.Eval( Tpart, false, isInScope );
   } // MakeDecision()
   
-  private ConsNode DoIf( ConsNode sexp, int argumentCount, String functionName )
+  private ConsNode DoIf( ConsNode sexp, int argumentCount, String functionName, boolean isInScope )
   throws SystemMessageException {
     try {
       this.CheckParameterAmount( argumentCount, 2, functionName, false );
@@ -716,20 +725,18 @@ public class TreeBuilder {
       this.CheckParameterAmount( argumentCount, 3, functionName, false );
     } // catch
     ConsNode condition = this.Clone( sexp.GetLeft() );
-    return this.MakeDecision( this.Eval( condition, false ), 
-                              sexp.GetRight().GetLeft(), sexp.GetRight().GetRight().GetLeft() );
+    return this.MakeDecision( this.Eval( condition, false, isInScope ), 
+                              sexp.GetRight().GetLeft(), sexp.GetRight().GetRight().GetLeft(), isInScope );
   } // DoIf()
   
-  private ConsNode DoCond( ConsNode sexp, int argumentCount, String functionName )
+  private void ParseCond( ConsNode sexp, int argumentCount, String functionName, boolean isInScope )
   throws SystemMessageException {
-    AtomNode condition;
-    ConsNode checkDecisionType;
     try {
       ConsNode sexpNow = sexp;
       this.CheckParameterAmount( argumentCount, 1, functionName, true );
       while ( !sexpNow.IsAtomNode() ) {
         if ( sexpNow.GetLeft().IsAtomNode() )
-          throw new SystemMessageException( "EF" );
+          throw new SystemMessageException( "EF", "", DataType.NULL );
         else {
           ConsNode conditionNow;
           int count = 0;
@@ -740,20 +747,23 @@ public class TreeBuilder {
           } // while
           
           if ( count < 2 )
-            throw new SystemMessageException( "EF" );
+            throw new SystemMessageException( "EF", "", DataType.NULL );
         } // else
         
         sexpNow = sexpNow.GetRight();
       } // while
     } // try
     catch ( SystemMessageException e ) {
-      throw new SystemMessageException( "EF" );
+      throw new SystemMessageException( "EF", "", DataType.NULL );
     } // catch
-    
-    checkDecisionType = null;
+  } // DoCond()
+  
+  private ConsNode DoCond( ConsNode sexp, int argumentCount, boolean isInScope ) throws SystemMessageException {
+    ConsNode checkDecisionType = null;
+    AtomNode condition;
     while ( !sexp.GetRight().IsAtomNode() ) {
       if ( checkDecisionType == null )
-        checkDecisionType = this.ParseCond( sexp.GetLeft() );
+        checkDecisionType = this.ExecuteCond( sexp.GetLeft(), isInScope );
       sexp = sexp.GetRight();
     } // while
     
@@ -764,65 +774,147 @@ public class TreeBuilder {
     } // if
     
     if ( checkDecisionType == null )
-      checkDecisionType = this.ParseCond( sexp.GetLeft() );
+      checkDecisionType = this.ExecuteCond( sexp.GetLeft(), isInScope );
     
     if ( checkDecisionType == null )
-      throw new SystemMessageException( "NRV" );
+      throw new SystemMessageException( "NRV", "", DataType.NULL );
     
     return checkDecisionType;
-  } // DoCond()
+  }
   
-  private ConsNode ParseCond( ConsNode sexp ) throws SystemMessageException {
-    ConsNode condition = this.Eval( this.Clone( sexp.GetLeft() ), false );
+  private ConsNode ExecuteCond( ConsNode sexp, boolean isInScope ) throws SystemMessageException {
+    ConsNode condition = this.Eval( this.Clone( sexp.GetLeft() ), false, isInScope );
     if ( !condition.IsAtomNode() || ( condition.IsAtomNode() && ! ( ( AtomNode ) condition ).IsNil() ) ) {
       while ( !sexp.GetRight().IsAtomNode() ) {
-        sexp.SetLeft( this.Eval( sexp.GetLeft(), false ) );
+        sexp.SetLeft( this.Eval( sexp.GetLeft(), false, isInScope ) );
         sexp = sexp.GetRight();
       } // while
       
-      return this.Eval( sexp.GetLeft(), false );
+      return this.Eval( sexp.GetLeft(), false, isInScope );
     } // if
     else
       return null;
   } // ParseCond()
   
-  private ConsNode Let( ConsNode sexp, int argumentCount, Stack localValue ) throws SystemMessageException {
+  private ConsNode Let( ConsNode sexp, int argumentCount, boolean isInScope ) throws SystemMessageException {
     try {
-      this.CheckParameterAmount(argumentCount, 2, "#<procedure let>", true );
+      this.CheckParameterAmount( argumentCount, 2, "#<procedure let>", true );
     } catch ( SystemMessageException e ) {
-      throw new SystemMessageException( "EF" );
+      throw new SystemMessageException( "EF", "", DataType.NULL );
     } // catch
     
+    int count = 1;
     if ( !sexp.GetLeft().IsAtomNode() ) {
-      int count = 1;
       ConsNode sexpFirstNow = sexp.GetLeft();
-        if ( !sexpFirstNow.IsAtomNode() ) {
-          if( !sexpFirstNow.GetLeft().IsAtomNode() ||
-              ( ( AtomNode ) sexpFirstNow.GetLeft() ).GetDataType() == DataType.SYMBOL ) ;
-          else  
-            throw new SystemMessageException( "EF" );
-          sexpFirstNow = sexpFirstNow.GetRight();
-          while ( !sexpFirstNow.IsAtomNode() ) {
-            count++;
-            sexpFirstNow = sexpFirstNow.GetRight();
-          } // while
-          
-          if ( ! ( ( AtomNode ) sexpFirstNow ).IsNil() || count != 2 )
-            throw new SystemMessageException( "EF" );
+      while ( !sexpFirstNow.IsAtomNode() ) {
+        if ( !sexpFirstNow.GetLeft().IsAtomNode() ) {
+          if ( ( ( AtomNode ) sexpFirstNow.GetLeft().GetLeft() ).GetDataType() != DataType.SYMBOL )
+            throw new SystemMessageException( "EF", "", DataType.NULL );
         } // if
-        else
-          throw new SystemMessageException( "EF" );
+        else  
+          throw new SystemMessageException( "EF", "", DataType.NULL );
+        ConsNode sexpInFirstNow = sexpFirstNow.GetLeft().GetRight();
+        while ( !sexpInFirstNow.IsAtomNode() ) {
+          count++;
+          sexpInFirstNow = sexpInFirstNow.GetRight();
+        } // while
+        
+        if ( ! ( ( AtomNode ) sexpInFirstNow ).IsNil() || count != 2 )
+          throw new SystemMessageException( "EF", "", DataType.NULL );
+        count = 1;
+        sexpFirstNow = sexpFirstNow.GetRight(); 
+      } // while
+      
+      if ( ! ( ( AtomNode ) sexpFirstNow ).IsNil() )
+        throw new SystemMessageException( "EF", "", DataType.NULL );    
+      sexpFirstNow = sexp.GetLeft();
+      count = 0;
+      while ( !sexpFirstNow.IsAtomNode() ) {
+        String variable = ( ( AtomNode ) sexpFirstNow.GetLeft().GetLeft() ).ToString();
+        ConsNode aNode = this.Eval( sexpFirstNow.GetLeft().GetRight().GetLeft(), false, isInScope );
+        VarNode vn = new VarNode( variable, aNode );
+        this.mLocalVar.Push( vn );
+        sexpFirstNow = sexpFirstNow.GetRight(); 
+        count++;
+      } // while
     } // if
     else if ( ( ( AtomNode ) sexp.GetLeft() ).IsNil() ) ;
     else
-      throw new SystemMessageException( "EF" );
+      throw new SystemMessageException( "EF", "", DataType.NULL );
     
-    while ( !sexp.IsAtomNode() ) {
+    sexp = sexp.GetRight();
+    ConsNode parameter;
+    do {
+      parameter = this.Eval( sexp.GetLeft(), false, true );
+      sexp = sexp.GetRight();
+    } while ( !sexp.IsAtomNode() ) ;
+    
+    for ( int i = 0 ; i < count ; i++ )
+      this.mLocalVar.Pop();
+    return parameter;
+  } // Let()
+  
+  private void Define( ConsNode sexp, int argumentCount ) throws SystemMessageException {
+    try {
+      this.CheckParameterAmount( argumentCount, 2, "DEFINE", false );
+    } catch ( SystemMessageException e ) {
+      throw new SystemMessageException( "EF", "", DataType.NULL );
+    } // catch
+    if ( sexp.GetLeft().IsAtomNode() ) {
+      try {
+        this.DoDefine( sexp.GetLeft(), sexp.GetRight().GetLeft() );
+      } catch ( SystemMessageException e ) {
+        if ( e.GetSystemCode().matches( "DEFINE" ) ) {
+          System.out.println("\n> " +  e.GetAtom() + " defined" );
+          throw new SystemMessageException( "DEFINE" );
+        }
+        else
+          throw e;
+      } // catch
+    } // if
+    else {
+      ConsNode keyNode = sexp.GetLeft();
+      ConsNode valueNode = sexp.GetRight().GetLeft();
+      while ( !keyNode.IsAtomNode() && !valueNode.IsAtomNode() ) {
+        keyNode = keyNode.GetRight();
+        valueNode = valueNode.GetRight();
+      } // while
       
-    }
-    
-    return null;
-  }
+      if ( keyNode.IsAtomNode() && valueNode.IsAtomNode() )
+        if ( ! ( ( AtomNode ) keyNode ).IsNil() || ! ( ( AtomNode ) valueNode ).IsNil() )
+          throw new SystemMessageException( "EF", "", DataType.NULL );
+        else ;
+      else
+        throw new SystemMessageException( "EF", "", DataType.NULL );
+      keyNode = sexp.GetLeft();
+      valueNode = sexp.GetRight().GetLeft();
+      while ( !keyNode.IsAtomNode() && !valueNode.IsAtomNode() ) {
+        try{
+          this.DoDefine( keyNode.GetLeft(), valueNode.GetLeft() );
+        } catch( SystemMessageException e ) {
+          if( e.GetSystemCode().matches( "DEFINE" ) )
+            System.out.println( "\n> " + e.GetAtom() + " defined" );
+          else
+            throw e;
+        }
+        keyNode = keyNode.GetRight();
+        valueNode = valueNode.GetRight();
+      } // while
+      
+      throw new SystemMessageException( "DEFINE" );
+    } // else
+  } // Define()
+  
+  private void DoDefine( ConsNode keyNode, ConsNode valueNode ) throws SystemMessageException {
+    String key = ( ( AtomNode ) keyNode ).GetAtom().GetData();
+    if ( ( ( AtomNode ) keyNode ).GetDataType() == DataType.SYMBOL &&
+         !this.IsPermitiveSymbol( key ) ) {
+      this.mSymbolTable.put( key, this.Eval( valueNode, false, false ) );
+      throw new SystemMessageException( "DEFINE", key );
+    } // if
+    else
+      throw new SystemMessageException( "EF", "", DataType.NULL );
+  } // DoDefine()
   
   public void TreeTravel( ConsNode head, int column, boolean isTop, boolean needSpace ) {
     if ( head == null ) ;

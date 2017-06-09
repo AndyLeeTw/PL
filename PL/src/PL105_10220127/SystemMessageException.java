@@ -5,7 +5,7 @@ public class SystemMessageException extends Exception {
   private String mAtom;
   private int mLine;
   private int mColumn;
-  private ConsNode mHead;
+  private ConsNode mHead = null;
   
   public SystemMessageException( String systemCode ) {
     this.mSystemCode = systemCode;
