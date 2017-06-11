@@ -20,11 +20,13 @@ public class TreeBuilder {
       "equal?", "begin", "if", "cond", "list?", "atom?", "let", "lambda" };
   private ConsNode mTransTyper;
   private LinkedHashMap<String, ConsNode>mSymbolTable = new LinkedHashMap<String, ConsNode>();
+  private LinkedHashMap<String, ConsNode>mFunctionTable;
   private ValueStack mLocalVar;
   
   public TreeBuilder() {
     this.AddPermitiveSymbol();
     this.mLocalVar = new ValueStack();
+    this.mFunctionTable = new LinkedHashMap<String, ConsNode>();
   } // TreeBuilder()
   
   public ConsNode TreeConStruct( ConsNode head, ArrayList<Token> tokens, GetToken Getter )
@@ -132,10 +134,10 @@ public class TreeBuilder {
       } // else
     } // if
     else {
-      head.SetLeft( this.Eval( head.GetLeft(), isTop, isInScope ) );
-      if ( head.GetLeft().IsAtomNode() &&
-           ( ( AtomNode ) head.GetLeft() ).GetDataType() == DataType.SYMBOL ) {
-        AtomNode function = ( AtomNode ) head.GetLeft();
+      ConsNode functionNode =  this.Eval( head.GetLeft(), isTop, isInScope );
+      if ( functionNode.IsAtomNode() &&
+           ( ( AtomNode ) functionNode ).GetDataType() == DataType.SYMBOL ) {
+        AtomNode function = ( AtomNode ) functionNode;
         ConsNode sexp = head.GetRight();
         String functionName = function.GetAtom().GetData();
         int argumentCount = 0;
@@ -343,11 +345,48 @@ public class TreeBuilder {
               throw e;
           } // catch
         } // else if
+        else if ( functionName.matches( "#<procedure lambda>" ) ) {
+          this.CheckParameterAmount( argumentCount, 2, functionName, true );
+          //if ()
+          
+          return null;
+        } // else
+        else if ( functionName.matches( "#<procedure .*>" ) ) {
+          ConsNode interFunction = this.mFunctionTable.get( functionName );
+          ConsNode argumentNode = interFunction.GetLeft();
+          ConsNode sexpNow = sexp;
+          if (  argumentNode.IsAtomNode() && !sexpNow.GetRight().IsAtomNode() )
+            throw new SystemMessageException( "INoA", this.TakeRealFunction( functionName ) );
+          while ( !argumentNode.IsAtomNode() && !sexpNow.IsAtomNode() ) {
+           sexpNow = sexpNow.GetRight();
+            argumentNode = argumentNode.GetRight();
+          } // while
+          
+          if ( !argumentNode.IsAtomNode() || !sexpNow.IsAtomNode() )
+            throw new SystemMessageException( "INoA", this.TakeRealFunction( functionName ) );
+          argumentNode = interFunction.GetLeft();
+          sexpNow = sexp;
+          if ( !argumentNode.IsAtomNode() ) {
+            while ( !argumentNode.IsAtomNode() ) {
+              VarNode aNode = new VarNode( argumentNode.GetLeft().ToString(), sexpNow.GetLeft() );
+              this.mLocalVar.Push( aNode );
+              sexpNow = sexpNow.GetRight();
+              argumentNode = argumentNode.GetRight();
+            } // while
+            
+            ConsNode returnNode = this.Eval( interFunction.GetRight().GetLeft(), false, true );
+            for ( int i = 0 ; i < argumentCount ; i++ )
+              this.mLocalVar.Pop();
+            return returnNode;
+          } // if
+          else
+            return this.Eval( interFunction.GetRight().GetLeft(), false, isInScope );
+        } // else if
         else
           throw new SystemMessageException( "AtANF", functionName );
       } // else if
-      else if ( head.GetLeft().IsAtomNode() &&
-                ( ( AtomNode ) head.GetLeft() ).GetDataType() == DataType.QUOTE )
+      else if ( functionNode.IsAtomNode() &&
+                ( ( AtomNode ) functionNode ).GetDataType() == DataType.QUOTE )
         return head.GetRight().GetLeft();
       else
         throw new SystemMessageException( "AtANF", "", head.GetLeft() );
@@ -363,7 +402,7 @@ public class TreeBuilder {
   } // NIL()
   
   public void LocalValueClear() {
-    this.mLocalVar.Clear();;
+    this.mLocalVar.Clear();
   } // LocalValueClear()
   
   private ConsNode Clone( ConsNode head ) {
@@ -861,51 +900,29 @@ public class TreeBuilder {
       throw new SystemMessageException( "EF", "", DataType.NULL );
     } // catch
     if ( sexp.GetLeft().IsAtomNode() ) {
-      try {
-        this.DoDefine( sexp.GetLeft(), sexp.GetRight().GetLeft() );
-      } catch ( SystemMessageException e ) {
-        if ( e.GetSystemCode().matches( "DEFINE" ) ) {
-          System.out.println("\n> " +  e.GetAtom() + " defined" );
-          throw new SystemMessageException( "DEFINE" );
-        }
-        else
-          throw e;
-      } // catch
+      this.DoSymbolDefine( sexp.GetLeft(), sexp.GetRight().GetLeft() );
     } // if
     else {
       ConsNode keyNode = sexp.GetLeft();
       ConsNode valueNode = sexp.GetRight().GetLeft();
-      while ( !keyNode.IsAtomNode() && !valueNode.IsAtomNode() ) {
-        keyNode = keyNode.GetRight();
-        valueNode = valueNode.GetRight();
+      while ( !keyNode.IsAtomNode() ) {
+        if ( keyNode.GetLeft().IsAtomNode() && ( ( AtomNode ) keyNode.GetLeft() ).GetDataType() == DataType.SYMBOL )
+          keyNode = keyNode.GetRight();
+        else
+          throw new SystemMessageException( "EF", "", DataType.NULL );
       } // while
       
-      if ( keyNode.IsAtomNode() && valueNode.IsAtomNode() )
-        if ( ! ( ( AtomNode ) keyNode ).IsNil() || ! ( ( AtomNode ) valueNode ).IsNil() )
-          throw new SystemMessageException( "EF", "", DataType.NULL );
-        else ;
-      else
+      if ( ! ( ( AtomNode ) keyNode ).IsNil() )
         throw new SystemMessageException( "EF", "", DataType.NULL );
       keyNode = sexp.GetLeft();
-      valueNode = sexp.GetRight().GetLeft();
-      while ( !keyNode.IsAtomNode() && !valueNode.IsAtomNode() ) {
-        try{
-          this.DoDefine( keyNode.GetLeft(), valueNode.GetLeft() );
-        } catch( SystemMessageException e ) {
-          if( e.GetSystemCode().matches( "DEFINE" ) )
-            System.out.println( "\n> " + e.GetAtom() + " defined" );
-          else
-            throw e;
-        }
-        keyNode = keyNode.GetRight();
-        valueNode = valueNode.GetRight();
-      } // while
+      valueNode = sexp;
+      this.DoFunctionDefine( keyNode, valueNode );
       
       throw new SystemMessageException( "DEFINE" );
     } // else
   } // Define()
   
-  private void DoDefine( ConsNode keyNode, ConsNode valueNode ) throws SystemMessageException {
+  private void DoSymbolDefine( ConsNode keyNode, ConsNode valueNode ) throws SystemMessageException {
     String key = ( ( AtomNode ) keyNode ).GetAtom().GetData();
     if ( ( ( AtomNode ) keyNode ).GetDataType() == DataType.SYMBOL &&
          !this.IsPermitiveSymbol( key ) ) {
@@ -915,6 +932,15 @@ public class TreeBuilder {
     else
       throw new SystemMessageException( "EF", "", DataType.NULL );
   } // DoDefine()
+  
+  private void DoFunctionDefine( ConsNode keyNode, ConsNode function ) throws SystemMessageException {
+    String key = keyNode.GetLeft().ToString();
+    this.mSymbolTable.put( key, keyNode.GetLeft() );
+    ( ( AtomNode ) keyNode.GetLeft() ).GetAtom().SetData( "#<procedure "  + key + ">" );
+    function.SetLeft( function.GetLeft().GetRight() );   
+    this.mFunctionTable.put( keyNode.GetLeft().ToString(), function );
+    throw new SystemMessageException( "DEFINE", key );
+  } // DoFunctionDefine()
   
   public void TreeTravel( ConsNode head, int column, boolean isTop, boolean needSpace ) {
     if ( head == null ) ;
