@@ -3,8 +3,6 @@ package PL105_10220127;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.LinkedHashMap;
-import java.util.Stack;
-import java.util.Iterator;
 
 public class Main {
   public static void main( String []args ) {

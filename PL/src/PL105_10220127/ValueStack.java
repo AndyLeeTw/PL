@@ -1,6 +1,5 @@
 package PL105_10220127;
 
-import java.util.Iterator;
 import java.util.ArrayList;
 
 public class ValueStack {
@@ -24,7 +23,7 @@ public class ValueStack {
   } // Clear()
   
   public ConsNode GetLocalValue( String var ) {
-    for ( int i = 0 ; i < this.mStack.size() ; i++ ) {
+    for ( int i = this.mStack.size() - 1 ; i >= 0 ; i-- ) {
       VarNode localValue = this.mStack.get( i );
       if ( localValue.GetVariable().compareTo( var ) == 0 )
         return localValue.GetmNode();

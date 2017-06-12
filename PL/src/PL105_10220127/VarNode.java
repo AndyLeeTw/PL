@@ -2,7 +2,7 @@ package PL105_10220127;
 
 public class VarNode {
   private ConsNode mNode;
-  private String Variable;
+  private String mVariable;
   public VarNode( String Var, ConsNode aNode ) {
     this.SetVariable( Var );
     this.SetmNode( aNode );
@@ -17,10 +17,10 @@ public class VarNode {
   } // SetmNode()
   
   public String GetVariable() {
-    return Variable;
+    return mVariable;
   } // GetVariable()
   
   public void SetVariable( String variable ) {
-    Variable = variable;
+    mVariable = variable;
   } // SetVariable()
 } // class VarNode
