@@ -346,7 +346,7 @@ public class TreeBuilder {
               throw e;
           } // catch
         } // else if
-        else if ( functionName.matches( "#<procedure lambda>|#function" ) ) {
+        else if ( functionName.matches( "#<procedure lambda>" ) ) {
           if ( head.GetLeft().ToString().matches( "lambda" ) ) {
             ConsNode keyNode;
             try {
@@ -473,7 +473,7 @@ public class TreeBuilder {
   private ConsNode Arithmetic( ConsNode sexp, int argumentCount, String functionName,
                                int operator, boolean isInScope ) throws SystemMessageException {
     float count = 0;
-    boolean isIntDivide = false;
+    boolean isIntDivide;
     ConsNode sexpNow = sexp;
     this.CheckParameterAmount( argumentCount, 2, functionName, true );
     while ( !sexpNow.IsAtomNode() ) {
@@ -515,7 +515,7 @@ public class TreeBuilder {
     
     if ( isIntDivide )
       return new AtomNode( new Token( String.format( "%f", count ), 0, 0 ), DataType.INT );
-    else
+    else 
       return new AtomNode( new Token( String.format( "%f", count ), 0, 0 ), DataType.FLOAT );
   } // Arithmetic()
   
@@ -955,6 +955,7 @@ public class TreeBuilder {
   
   private ConsNode DoCustomFunction( ConsNode interFunction, ConsNode argumentNode, ConsNode sexpNow,
                                      int argumentCount, boolean isInScope ) throws SystemMessageException {
+    ConsNode returnNode;
     if ( !argumentNode.IsAtomNode() ) {
       while ( !argumentNode.IsAtomNode() ) {
         VarNode aNode = new VarNode( argumentNode.GetLeft().ToString(),
@@ -963,14 +964,16 @@ public class TreeBuilder {
         sexpNow = sexpNow.GetRight();
         argumentNode = argumentNode.GetRight();
       } // while
-      
-      ConsNode returnNode = this.Eval( this.Clone( interFunction.GetRight().GetLeft() ), false, true );
-      for ( int i = 0 ; i < argumentCount ; i++ )
-        this.mLocalVar.Pop();
-      return returnNode;
     } // if
-    else
-      return this.Eval( this.Clone( interFunction.GetRight().GetLeft() ), false, isInScope );
+    
+    interFunction = interFunction.GetRight();
+    do {
+      returnNode = this.Eval( this.Clone( interFunction.GetLeft() ), false, true );
+      interFunction = interFunction.GetRight();
+    } while ( !interFunction.IsAtomNode() );
+    for ( int i = 0 ; i < argumentCount ; i++ )
+      this.mLocalVar.Pop();
+    return returnNode;
   } // DoCustomFunction()
   
   private void CheckCustomFunction( ConsNode argumentNode, ConsNode sexpNow,
